@@ -3,13 +3,13 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: EcoWise sustainable lifestyle API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
-    description: Health operations
+  - name: ecowise
 paths:
   /healthz:
     get:
@@ -24,7 +24,217 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /analyze:
+    post:
+      operationId: analyzeActivity
+      tags: [ecowise]
+      summary: Analyze an everyday activity and save recommendations
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AnalyzeActivityInput"
+      responses:
+        "201":
+          description: Analysis and recommendations saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalysisResult"
+        "400":
+          description: Invalid activity description
+        "401":
+          description: Sign in required
+  /dashboard:
+    get:
+      operationId: getDashboard
+      tags: [ecowise]
+      summary: Get the signed-in user's dashboard data
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dashboard"
+        "401":
+          description: Sign in required
+  /activities:
+    get:
+      operationId: getActivities
+      tags: [ecowise]
+      summary: Search and filter the signed-in user's analysis history
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: category
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/ActivityCategory"
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 120
+      responses:
+        "200":
+          description: Activity history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityRecord"
+        "401":
+          description: Sign in required
+  /activities/{activityId}:
+    get:
+      operationId: getActivity
+      tags: [ecowise]
+      summary: Get an activity analysis and its recommendations
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: activityId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Activity details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActivityRecord"
+        "404":
+          description: Activity not found
+        "401":
+          description: Sign in required
+  /recommendations/{recommendationId}/complete:
+    post:
+      operationId: completeRecommendation
+      tags: [ecowise]
+      summary: Complete a recommendation and update progress once
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: recommendationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Updated progress
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CompletionResult"
+        "404":
+          description: Recommendation not found or already completed
+        "401":
+          description: Sign in required
+  /badges:
+    get:
+      operationId: getBadges
+      tags: [ecowise]
+      summary: Get public badges and signed-in user's badge progress
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Badge progress
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BadgeProgress"
+        "401":
+          description: Sign in required
+  /challenges:
+    get:
+      operationId: getChallenges
+      tags: [ecowise]
+      summary: Get active challenges and user progress
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Challenges
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ChallengeProgress"
+        "401":
+          description: Sign in required
+  /challenges/{challengeId}/join:
+    post:
+      operationId: joinChallenge
+      tags: [ecowise]
+      summary: Join an active challenge
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: challengeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Joined challenge
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChallengeProgress"
+        "404":
+          description: Challenge not found or inactive
+        "401":
+          description: Sign in required
+  /profile:
+    patch:
+      operationId: updateProfile
+      tags: [ecowise]
+      summary: Update the signed-in user's profile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileUpdate"
+      responses:
+        "200":
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+        "400":
+          description: Invalid profile update
+        "401":
+          description: Sign in required
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   schemas:
     HealthStatus:
       type: object
@@ -33,4 +243,236 @@ components:
           type: string
       required:
         - status
-
+    ActivityCategory:
+      type: string
+      enum:
+        - Transportation
+        - Energy
+        - Water
+        - Food
+        - Shopping
+        - Waste
+        - Lifestyle
+        - Other
+    Difficulty:
+      type: string
+      enum: [Easy, Moderate, Challenging]
+    ImpactLevel:
+      type: string
+      enum: [Low, Medium, High]
+    AnalyzeActivityInput:
+      type: object
+      additionalProperties: false
+      required: [inputText]
+      properties:
+        inputText:
+          type: string
+          minLength: 8
+          maxLength: 1200
+    Recommendation:
+      type: object
+      required:
+        - id
+        - activityId
+        - title
+        - description
+        - category
+        - difficulty
+        - points
+        - estimatedImpact
+        - isCompleted
+        - createdAt
+      properties:
+        id: { type: string, format: uuid }
+        activityId: { type: string, format: uuid }
+        title: { type: string }
+        description: { type: string }
+        category: { $ref: "#/components/schemas/ActivityCategory" }
+        difficulty: { $ref: "#/components/schemas/Difficulty" }
+        points: { type: integer }
+        estimatedImpact: { type: string }
+        isCompleted: { type: boolean }
+        createdAt: { type: string, format: date-time }
+    ActivityRecord:
+      type: object
+      required:
+        - id
+        - inputText
+        - category
+        - activityName
+        - currentChoice
+        - frequency
+        - impactLevel
+        - analysis
+        - createdAt
+        - pointsEarned
+        - recommendations
+      properties:
+        id: { type: string, format: uuid }
+        inputText: { type: string }
+        category: { $ref: "#/components/schemas/ActivityCategory" }
+        activityName: { type: string }
+        currentChoice: { type: string }
+        frequency: { type: string }
+        impactLevel: { $ref: "#/components/schemas/ImpactLevel" }
+        analysis: { type: string }
+        createdAt: { type: string, format: date-time }
+        pointsEarned: { type: integer }
+        recommendations:
+          type: array
+          items:
+            $ref: "#/components/schemas/Recommendation"
+    AnalysisResult:
+      type: object
+      required: [activity]
+      properties:
+        activity:
+          $ref: "#/components/schemas/ActivityRecord"
+    Profile:
+      type: object
+      required:
+        - id
+        - fullName
+        - email
+        - avatarUrl
+        - ecoScore
+        - totalPoints
+        - currentStreak
+        - longestStreak
+        - totalActivities
+        - lastActivityDate
+        - preferredCategory
+      properties:
+        id: { type: string, format: uuid }
+        fullName: { type: string }
+        email: { type: string, format: email }
+        avatarUrl: { type: [string, "null"], format: uri }
+        ecoScore: { type: integer, minimum: 0, maximum: 100 }
+        totalPoints: { type: integer, minimum: 0 }
+        currentStreak: { type: integer, minimum: 0 }
+        longestStreak: { type: integer, minimum: 0 }
+        totalActivities: { type: integer, minimum: 0 }
+        lastActivityDate: { type: [string, "null"], format: date }
+        preferredCategory:
+          oneOf:
+            - $ref: "#/components/schemas/ActivityCategory"
+            - type: "null"
+    ProfileUpdate:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        fullName: { type: string, minLength: 1, maxLength: 100 }
+        avatarUrl: { type: [string, "null"], format: uri }
+        preferredCategory:
+          oneOf:
+            - $ref: "#/components/schemas/ActivityCategory"
+            - type: "null"
+    Badge:
+      type: object
+      required: [id, name, description, icon]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: string }
+        icon: { type: string }
+    BadgeProgress:
+      allOf:
+        - $ref: "#/components/schemas/Badge"
+        - type: object
+          required: [requirementType, requirementValue, earnedAt, progress]
+          properties:
+            requirementType: { type: string }
+            requirementValue: { type: integer }
+            earnedAt: { type: [string, "null"], format: date-time }
+            progress: { type: integer, minimum: 0 }
+    ChallengeProgress:
+      type: object
+      required:
+        - id
+        - title
+        - description
+        - category
+        - points
+        - targetCount
+        - durationDays
+        - joined
+        - progress
+        - completed
+        - startedAt
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        description: { type: string }
+        category:
+          oneOf:
+            - $ref: "#/components/schemas/ActivityCategory"
+            - type: "null"
+        points: { type: integer }
+        targetCount: { type: integer }
+        durationDays: { type: integer }
+        joined: { type: boolean }
+        progress: { type: integer, minimum: 0 }
+        completed: { type: boolean }
+        startedAt: { type: [string, "null"], format: date-time }
+    WeeklyActivity:
+      type: object
+      required: [date, activityCount, points]
+      properties:
+        date: { type: string, format: date }
+        activityCount: { type: integer }
+        points: { type: integer }
+    CategoryCount:
+      type: object
+      required: [category, count]
+      properties:
+        category: { $ref: "#/components/schemas/ActivityCategory" }
+        count: { type: integer }
+    PointDay:
+      type: object
+      required: [date, points]
+      properties:
+        date: { type: string, format: date }
+        points: { type: integer }
+    Dashboard:
+      type: object
+      required:
+        - profile
+        - weeklyActivity
+        - categoryBreakdown
+        - recentActivities
+        - earnedBadges
+        - activeChallenges
+        - pointsHistory
+      properties:
+        profile: { $ref: "#/components/schemas/Profile" }
+        weeklyActivity:
+          type: array
+          items: { $ref: "#/components/schemas/WeeklyActivity" }
+        categoryBreakdown:
+          type: array
+          items: { $ref: "#/components/schemas/CategoryCount" }
+        recentActivities:
+          type: array
+          items: { $ref: "#/components/schemas/ActivityRecord" }
+        earnedBadges:
+          type: array
+          items: { $ref: "#/components/schemas/Badge" }
+        activeChallenges:
+          type: array
+          items: { $ref: "#/components/schemas/ChallengeProgress" }
+        pointsHistory:
+          type: array
+          items: { $ref: "#/components/schemas/PointDay" }
+    CompletionResult:
+      type: object
+      required: [recommendation, profile, newBadges, updatedChallenges]
+      properties:
+        recommendation: { $ref: "#/components/schemas/Recommendation" }
+        profile: { $ref: "#/components/schemas/Profile" }
+        newBadges:
+          type: array
+          items: { $ref: "#/components/schemas/Badge" }
+        updatedChallenges:
+          type: array
+          items: { $ref: "#/components/schemas/ChallengeProgress" }

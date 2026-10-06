@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "EcoWise"
+description = "A sustainable lifestyle companion that analyzes everyday activities, recommends greener alternatives, and tracks real progress through points, streaks, badges, and challenges."
+version = "1.0.0"
+id = "artifacts/ecowise"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 25584
+
+[services.development]
+run = "pnpm --filter @workspace/ecowise run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/ecowise", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/ecowise/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25584"
+BASE_PATH = "/"
