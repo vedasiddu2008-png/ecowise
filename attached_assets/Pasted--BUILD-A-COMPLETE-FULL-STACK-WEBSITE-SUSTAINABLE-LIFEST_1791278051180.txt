@@ -1,0 +1,1893 @@
+# BUILD A COMPLETE FULL-STACK WEBSITE — SUSTAINABLE LIFESTYLE RECOMMENDATION APP
+
+## 1. PROJECT OVERVIEW
+
+Build a complete, production-ready, responsive web application called:
+
+# 🌱 EcoWise — Sustainable Lifestyle Recommendation App
+
+The goal of the application is to help users make environmentally friendly choices in their everyday lives.
+
+The core problem:
+
+People perform many everyday activities such as travelling, shopping, using electricity, using plastic, wasting water, etc., but they may not know which alternatives are more environmentally friendly.
+
+The application should analyze a user's activity and provide practical sustainable alternatives.
+
+This should NOT be just a static website or UI prototype.
+
+I need a FULLY FUNCTIONAL application where:
+
+* Every button works
+* Every form works
+* Authentication works
+* Supabase database works
+* Data persists after refresh
+* Analyse functionality works
+* Recommendations are generated
+* Eco score updates
+* Streaks update
+* Badges are awarded
+* Challenges work
+* Dashboard displays real user data
+* History works
+* Profile works
+* Logout works
+* Error states work
+* Loading states work
+* Empty states work
+* Mobile and desktop layouts work
+
+DO NOT create fake buttons or placeholder interactions.
+
+---
+
+# 2. TECHNOLOGY STACK
+
+Use:
+
+Frontend:
+
+* React
+* TypeScript
+* Vite
+* Tailwind CSS
+* Lucide React icons
+
+Backend:
+
+* Node.js
+* Express or the existing Replit backend architecture
+* REST API where appropriate
+
+Database:
+
+* Supabase PostgreSQL
+
+Authentication:
+
+* Supabase Auth
+* Email/password authentication
+* Optional Google authentication if easy to implement
+
+AI:
+
+* Gemini API if GEMINI_API_KEY is available
+* Keep the Gemini API key ONLY on the server side
+* NEVER expose API keys in frontend code
+
+Charts:
+
+* Recharts
+
+State management:
+
+* React Context or a lightweight state solution
+
+Use clean component-based architecture.
+
+---
+
+# 3. IMPORTANT BUILD RULE
+
+DO NOT STOP AFTER CREATING THE UI.
+
+The application must actually function end-to-end.
+
+For every visible button:
+
+1. Define its action
+2. Connect it to frontend logic
+3. Connect it to backend/database when required
+4. Show loading state
+5. Handle success
+6. Handle errors
+7. Update the UI immediately
+8. Persist important data in Supabase
+
+If a button cannot logically perform an action, do not display it.
+
+---
+
+# 4. BRANDING
+
+Application name:
+
+EcoWise
+
+Tagline:
+
+"Small choices. Big impact. 🌱"
+
+Primary feeling:
+
+* Modern
+* Clean
+* Friendly
+* Sustainable
+* Slightly gamified
+* Professional enough for a hackathon/demo
+* Not childish
+
+Use a nature-inspired visual style.
+
+Use:
+
+* Green
+* Emerald
+* Teal
+* White
+* Soft neutral backgrounds
+
+Use rounded cards, subtle shadows, clean typography and modern spacing.
+
+Add tasteful animations, but do not overdo them.
+
+---
+
+# 5. MAIN USER FLOW
+
+The main user journey should be:
+
+Landing Page
+→ Sign Up / Login
+→ Dashboard
+→ Analyse Activity
+→ AI Analysis
+→ Sustainable Recommendations
+→ User chooses/completes an action
+→ Eco points awarded
+→ Eco score updated
+→ Streak updated
+→ Badge checked
+→ History updated
+→ Dashboard updated
+
+This complete flow must work.
+
+---
+
+# 6. LANDING PAGE
+
+Create a beautiful landing page.
+
+Hero section:
+
+🌱 EcoWise
+
+"Small choices. Big impact."
+
+Description:
+
+"Turn everyday activities into sustainable habits with personalized eco-friendly recommendations."
+
+Buttons:
+
+* Get Started
+* Login
+* Explore Features
+
+ALL buttons must work.
+
+Get Started:
+→ Navigate to Sign Up
+
+Login:
+→ Navigate to Login
+
+Explore Features:
+→ Scroll to features section
+
+Sections:
+
+### How It Works
+
+1. Tell us what you do
+2. AI analyzes your activity
+3. Get greener alternatives
+4. Build sustainable habits
+
+### Features
+
+* 🤖 AI Activity Analysis
+* 🌱 Personalized Recommendations
+* 📊 Eco Score
+* 🔥 Streaks
+* 🏆 Badges
+* 🎯 Challenges
+* 📈 Progress Tracking
+
+### CTA
+
+"Start your sustainable journey"
+
+Button:
+"Get Started"
+
+---
+
+# 7. AUTHENTICATION
+
+Create:
+
+/login
+
+/signup
+
+/forgot-password
+
+Use Supabase Auth.
+
+Signup fields:
+
+* Full Name
+* Email
+* Password
+* Confirm Password
+
+On successful signup:
+→ create profile
+→ redirect to dashboard
+
+Login:
+→ authenticate with Supabase
+→ redirect to dashboard
+
+Logout:
+→ sign out
+→ redirect to landing page
+
+Forgot password:
+→ Supabase password reset
+
+Show proper validation and error messages.
+
+Never expose passwords.
+
+---
+
+# 8. SUPABASE DATABASE
+
+Create the required Supabase schema.
+
+Tables:
+
+## profiles
+
+Fields:
+
+* id UUID PRIMARY KEY REFERENCES auth.users(id)
+* full_name TEXT
+* email TEXT
+* avatar_url TEXT nullable
+* eco_score INTEGER DEFAULT 0
+* total_points INTEGER DEFAULT 0
+* current_streak INTEGER DEFAULT 0
+* longest_streak INTEGER DEFAULT 0
+* total_activities INTEGER DEFAULT 0
+* created_at TIMESTAMP
+* updated_at TIMESTAMP
+* last_activity_date DATE nullable
+
+---
+
+## activities
+
+Fields:
+
+* id UUID PRIMARY KEY
+* user_id UUID
+* input_text TEXT
+* category TEXT
+* activity_name TEXT
+* current_choice TEXT
+* frequency TEXT
+* impact_level TEXT
+* analysis TEXT
+* created_at TIMESTAMP
+
+Categories:
+
+* Transportation
+* Energy
+* Water
+* Food
+* Shopping
+* Waste
+* Lifestyle
+* Other
+
+---
+
+## recommendations
+
+Fields:
+
+* id UUID PRIMARY KEY
+* activity_id UUID
+* user_id UUID
+* title TEXT
+* description TEXT
+* category TEXT
+* difficulty TEXT
+* points INTEGER
+* estimated_impact TEXT
+* is_completed BOOLEAN DEFAULT false
+* created_at TIMESTAMP
+
+---
+
+## completed_activities
+
+Fields:
+
+* id UUID PRIMARY KEY
+* user_id UUID
+* recommendation_id UUID nullable
+* activity_id UUID nullable
+* points_earned INTEGER
+* completed_at TIMESTAMP
+
+---
+
+## badges
+
+Fields:
+
+* id UUID PRIMARY KEY
+* name TEXT
+* description TEXT
+* icon TEXT
+* requirement_type TEXT
+* requirement_value INTEGER
+
+Seed badges such as:
+
+1. Eco Beginner
+2. Green Starter
+3. Eco Warrior
+4. Waste Reducer
+5. Green Traveler
+6. Water Saver
+7. Energy Saver
+8. Planet Protector
+9. 30 Day Champion
+10. Sustainability Master
+
+---
+
+## user_badges
+
+Fields:
+
+* id UUID PRIMARY KEY
+* user_id UUID
+* badge_id UUID
+* earned_at TIMESTAMP
+
+Prevent duplicate badges.
+
+---
+
+## challenges
+
+Fields:
+
+* id UUID PRIMARY KEY
+* title TEXT
+* description TEXT
+* category TEXT
+* points INTEGER
+* target_count INTEGER
+* duration_days INTEGER
+* active BOOLEAN DEFAULT true
+
+Create seed challenges.
+
+Examples:
+
+* 7-Day Green Travel Challenge
+* Plastic-Free Week
+* Save Energy Challenge
+* Water Saver Challenge
+* Walk More Challenge
+
+---
+
+## user_challenges
+
+Fields:
+
+* id UUID PRIMARY KEY
+* user_id UUID
+* challenge_id UUID
+* progress INTEGER DEFAULT 0
+* completed BOOLEAN DEFAULT false
+* started_at TIMESTAMP
+* completed_at TIMESTAMP nullable
+
+---
+
+## daily_activity
+
+Fields:
+
+* id UUID PRIMARY KEY
+* user_id UUID
+* activity_date DATE
+* points INTEGER DEFAULT 0
+* activity_count INTEGER DEFAULT 0
+
+Use this table for streak calculation.
+
+---
+
+# 9. SUPABASE SECURITY
+
+Enable Row Level Security.
+
+Users must only be able to access their own:
+
+* Profile
+* Activities
+* Recommendations
+* Completed activities
+* User badges
+* User challenges
+* Daily activity
+
+Public data can be read for:
+
+* Badges
+* Challenges
+
+Never allow one user to read another user's private information.
+
+Create all required RLS policies.
+
+---
+
+# 10. DASHBOARD
+
+Create:
+
+/dashboard
+
+This is the main screen after login.
+
+Top navigation:
+
+🌱 EcoWise
+
+Links:
+
+* Dashboard
+* Analyse
+* History
+* Challenges
+* Badges
+* Profile
+
+Right side:
+
+* User avatar
+* User name
+* Logout
+
+---
+
+# 11. DASHBOARD HERO
+
+Show:
+
+"Welcome back, [Name]! 🌱"
+
+Subtitle:
+
+"Every small choice makes a difference."
+
+Then show 4 statistic cards:
+
+### Eco Score
+
+Example:
+82/100
+
+### Current Streak
+
+Example:
+🔥 7 days
+
+### Eco Points
+
+Example:
+640 XP
+
+### Activities
+
+Example:
+24 completed
+
+These values MUST come from Supabase.
+
+Do not hardcode them.
+
+---
+
+# 12. ECO SCORE
+
+Create a visually attractive circular progress indicator.
+
+Example:
+
+🌱
+
+82
+
+Eco Score
+
+Calculate score based on user activity and sustainable actions.
+
+Keep score between 0 and 100.
+
+The score should increase when users complete sustainable recommendations.
+
+Do not randomly change the score.
+
+---
+
+# 13. ANALYSE PAGE
+
+Create:
+
+/analyse
+
+This is the most important feature.
+
+Title:
+
+"Analyze Your Everyday Activity"
+
+Description:
+
+"Tell us what you normally do. We'll suggest a greener alternative."
+
+Large text box:
+
+Placeholder:
+
+"Example: I travel 5 km to college by car every day."
+
+Button:
+
+🔍 Analyze Activity
+
+The Analyze button MUST actually work.
+
+---
+
+# 14. ANALYSIS PROCESS
+
+When user clicks Analyze:
+
+1. Validate input
+2. Show loading state
+3. Send activity to backend
+4. Backend analyzes the text
+5. Identify:
+
+   * category
+   * activity
+   * current choice
+   * frequency
+   * impact level
+6. Generate sustainable recommendations
+7. Save activity to Supabase
+8. Save recommendations to Supabase
+9. Display result
+10. Never lose the user's input
+
+If Gemini API is available:
+
+Use Gemini to understand the activity.
+
+Prompt Gemini internally to return structured JSON.
+
+Expected structure:
+
+{
+"category": "Transportation",
+"activity_name": "Travel to college",
+"current_choice": "Car",
+"frequency": "Daily",
+"impact_level": "Medium",
+"analysis": "The activity involves daily individual car travel.",
+"recommendations": [
+{
+"title": "Try cycling",
+"description": "Use a bicycle for short-distance travel when practical.",
+"difficulty": "Easy",
+"points": 20,
+"estimated_impact": "Lower environmental impact"
+},
+{
+"title": "Use public transport",
+"description": "Use public transportation instead of travelling alone by car.",
+"difficulty": "Easy",
+"points": 15,
+"estimated_impact": "Lower environmental impact"
+}
+]
+}
+
+IMPORTANT:
+
+If Gemini API is unavailable, the Analyze feature MUST STILL WORK.
+
+Implement a deterministic fallback recommendation engine using category keywords.
+
+Examples:
+
+"car", "bike", "bus", "travel", "college", "drive"
+→ Transportation
+
+"plastic", "bottle", "bag"
+→ Waste/Shopping
+
+"light", "electricity", "fan", "AC"
+→ Energy
+
+"water", "tap", "shower"
+→ Water
+
+"food", "meat", "vegetarian", "restaurant"
+→ Food
+
+This guarantees the application works even without an AI API key.
+
+---
+
+# 15. ANALYSIS RESULT UI
+
+After analysis, show:
+
+## 🌱 Your Activity
+
+Category:
+Transportation
+
+Current activity:
+"I travel 5 km to college by car every day."
+
+Impact:
+Medium
+
+Then:
+
+## 🌿 Better Alternatives
+
+Display recommendation cards.
+
+Each card should contain:
+
+* Icon
+* Recommendation title
+* Description
+* Difficulty
+* Eco points
+* Impact
+* Complete button
+
+Example:
+
+🚲 Cycling
+
+"Use a bicycle for short-distance trips."
+
+Difficulty:
+Easy
+
++20 XP
+
+Button:
+
+"Complete Activity"
+
+---
+
+# 16. COMPLETE ACTIVITY BUTTON
+
+This button MUST work.
+
+When clicked:
+
+1. Mark recommendation as completed
+2. Add points to user's profile
+3. Increment total activities
+4. Update eco score
+5. Update daily activity
+6. Recalculate streak
+7. Check badges
+8. Update challenges
+9. Show success animation/toast
+10. Change button to:
+    "✓ Completed"
+
+Prevent duplicate point awards.
+
+Do not allow users to repeatedly click the same recommendation to farm points.
+
+---
+
+# 17. STREAK SYSTEM
+
+Implement a real streak system.
+
+A streak increases when the user completes at least one sustainable activity on a day.
+
+Rules:
+
+If today is consecutive to the previous activity day:
+
+current_streak += 1
+
+If the previous activity was more than one day ago:
+
+start a new streak at 1.
+
+If the user completes multiple activities on the same day:
+
+DO NOT increase the streak multiple times.
+
+Update:
+
+* current_streak
+* longest_streak
+* last_activity_date
+
+Show:
+
+🔥 7 Day Streak
+
+and:
+
+"Keep going! You're building a sustainable habit."
+
+---
+
+# 18. STREAK UI
+
+Create a beautiful streak card:
+
+🔥
+
+7
+
+DAY STREAK
+
+"You're on fire! Keep making greener choices."
+
+Show weekly activity:
+
+Mon ✓
+Tue ✓
+Wed ✓
+Thu ✓
+Fri ✓
+Sat ✓
+Sun ○
+
+Use real activity data from Supabase.
+
+---
+
+# 19. BADGES
+
+Create a Badges page:
+
+/badges
+
+Display:
+
+### Earned
+
+Badges the user has unlocked.
+
+### Locked
+
+Badges still to unlock.
+
+Example:
+
+🌱 Eco Beginner
+"Complete your first sustainable activity"
+
+🔥 Eco Warrior
+"Reach a 7-day streak"
+
+♻️ Waste Reducer
+"Complete 10 waste-reduction activities"
+
+🚲 Green Traveler
+"Complete 10 transportation activities"
+
+⚡ Energy Saver
+"Complete 10 energy-saving activities"
+
+🌍 Planet Protector
+"Earn 1000 eco points"
+
+Show:
+
+* badge icon
+* name
+* description
+* earned date
+* progress if locked
+
+---
+
+# 20. AUTOMATIC BADGE ENGINE
+
+After every completed activity:
+
+checkBadgeEligibility(userId)
+
+Check all badge conditions.
+
+If a badge is newly earned:
+
+Insert into user_badges.
+
+Never duplicate badges.
+
+Show:
+
+🎉 Badge Unlocked!
+
+"Eco Warrior"
+
+"You reached a 7-day streak!"
+
+---
+
+# 21. CHALLENGES
+
+Create:
+
+/challenges
+
+Display active challenges.
+
+Example:
+
+## 🚲 Green Travel Week
+
+"Choose a sustainable transportation option 5 times."
+
+Progress:
+
+3 / 5
+
+██████░░░░
+
++100 XP
+
+Button:
+
+"View Challenge"
+
+---
+
+## ♻️ Plastic-Free Week
+
+"Avoid single-use plastic choices for 7 days."
+
+Progress:
+
+4 / 7
+
++150 XP
+
+---
+
+Challenges should use real user progress.
+
+If the user completes the requirement:
+
+Show:
+
+🏆 Challenge Completed!
+
+Award points only once.
+
+---
+
+# 22. HISTORY PAGE
+
+Create:
+
+/history
+
+Show all previous analyses.
+
+Each item:
+
+Date
+Activity
+Category
+Impact
+Recommendations
+Points earned
+
+Example:
+
+Oct 6
+
+🚗 Travel to college by car
+
+Transportation
+
+Medium Impact
+
++20 XP
+
+Clicking an activity opens detailed information.
+
+Add filters:
+
+* All
+* Transportation
+* Energy
+* Water
+* Food
+* Shopping
+* Waste
+
+Search should work.
+
+---
+
+# 23. PROFILE PAGE
+
+Create:
+
+/profile
+
+Display:
+
+* Profile picture/avatar
+* Full name
+* Email
+* Eco score
+* Total points
+* Current streak
+* Longest streak
+* Total activities
+* Badges earned
+
+Allow editing:
+
+* Full name
+* Avatar
+
+Save button MUST work.
+
+---
+
+# 24. SETTINGS
+
+Create:
+
+/settings
+
+Options:
+
+* Account
+* Notifications
+* Appearance
+* Logout
+
+Implement working logout.
+
+If appearance toggle is included, make it actually switch light/dark mode.
+
+Persist preference locally.
+
+---
+
+# 25. NAVIGATION
+
+Desktop:
+
+Sidebar or top navigation.
+
+Mobile:
+
+Responsive bottom navigation or hamburger menu.
+
+Every navigation item must route correctly.
+
+Routes:
+
+/
+/login
+/signup
+/dashboard
+/analyse
+/history
+/challenges
+/badges
+/profile
+/settings
+
+Protect authenticated routes.
+
+If unauthenticated user tries:
+
+/dashboard
+
+redirect to:
+
+/login
+
+---
+
+# 26. RESPONSIVE DESIGN
+
+The website MUST work properly on:
+
+* Desktop
+* Laptop
+* Tablet
+* Mobile
+
+Do not simply shrink desktop content.
+
+Create responsive layouts.
+
+On mobile:
+
+* Cards stack
+* Navigation becomes mobile-friendly
+* Buttons remain easy to tap
+* Text remains readable
+* Charts resize correctly
+
+---
+
+# 27. LOADING STATES
+
+Every asynchronous action needs a loading state.
+
+Examples:
+
+Analyze:
+
+"Analyzing your activity..."
+
+Login:
+
+"Signing in..."
+
+Signup:
+
+"Creating your account..."
+
+Save profile:
+
+"Saving..."
+
+Complete activity:
+
+"Updating your progress..."
+
+Use skeleton loaders where appropriate.
+
+---
+
+# 28. ERROR HANDLING
+
+Never show raw errors to users.
+
+Instead show friendly messages.
+
+Example:
+
+"Something went wrong while analyzing your activity. Please try again."
+
+If Supabase is unavailable:
+
+"Unable to connect to your account data. Please check your connection and try again."
+
+---
+
+# 29. EMPTY STATES
+
+Dashboard with no activities:
+
+🌱
+
+"Your sustainable journey starts here."
+
+Button:
+
+"Analyze Your First Activity"
+
+History with no activities:
+
+"No activities yet."
+
+Button:
+
+"Analyze an Activity"
+
+Badges with none earned:
+
+"Complete your first sustainable activity to unlock a badge!"
+
+---
+
+# 30. TOAST NOTIFICATIONS
+
+Use toast notifications.
+
+Examples:
+
+"Activity analyzed successfully 🌱"
+
+"+20 Eco Points!"
+
+"🔥 7-day streak!"
+
+"🏆 New badge unlocked!"
+
+"Profile updated successfully."
+
+---
+
+# 31. GAMIFICATION
+
+Use:
+
+XP / Eco Points
+Streaks
+Badges
+Challenges
+Eco Score
+Levels
+
+Example levels:
+
+0–99:
+🌱 Eco Beginner
+
+100–299:
+🌿 Green Starter
+
+300–599:
+🍃 Eco Explorer
+
+600–999:
+🔥 Eco Warrior
+
+1000+:
+🌍 Planet Protector
+
+Display the user's current level on dashboard.
+
+---
+
+# 32. ACTIVITY CATEGORIES
+
+Use these categories consistently:
+
+Transportation
+Energy
+Water
+Food
+Shopping
+Waste
+Lifestyle
+Other
+
+Each category should have an appropriate icon.
+
+---
+
+# 33. RECOMMENDATION LOGIC
+
+Recommendations should be practical, safe and realistic.
+
+Examples:
+
+Transportation:
+
+* Walking
+* Cycling
+* Public transport
+* Carpooling
+
+Energy:
+
+* Turn off unused lights
+* Use energy-efficient appliances
+* Reduce unnecessary AC usage
+
+Water:
+
+* Shorter showers
+* Turn off tap while brushing
+* Fix leaking taps
+
+Shopping:
+
+* Reusable bags
+* Reusable bottles
+* Buy durable products
+* Avoid unnecessary purchases
+
+Waste:
+
+* Recycle
+* Reuse
+* Compost where practical
+* Avoid single-use products
+
+Food:
+
+* Reduce food waste
+* Choose more plant-based options
+* Prefer local/seasonal foods when practical
+
+Do not make unsupported precise environmental claims.
+
+If displaying numerical environmental impact, label it clearly as an estimate and use a transparent calculation method.
+
+---
+
+# 34. DASHBOARD CHARTS
+
+Add useful charts using Recharts.
+
+Chart 1:
+
+Weekly Eco Activity
+
+Chart 2:
+
+Activities by Category
+
+Chart 3:
+
+Points earned over time
+
+Use actual Supabase data.
+
+If there is no data, show an attractive empty state instead of fake chart data.
+
+---
+
+# 35. DATABASE FUNCTIONS / BACKEND SERVICES
+
+Create reusable functions such as:
+
+analyzeActivity()
+
+generateRecommendations()
+
+completeRecommendation()
+
+updateEcoScore()
+
+updateStreak()
+
+awardPoints()
+
+checkBadges()
+
+updateChallenges()
+
+getDashboardStats()
+
+getActivityHistory()
+
+getUserBadges()
+
+getUserChallenges()
+
+Keep business logic organized.
+
+Do not put everything inside one huge React component.
+
+---
+
+# 36. API ENDPOINTS
+
+Create clean API endpoints where needed.
+
+Examples:
+
+POST /api/analyze
+
+POST /api/recommendations/:id/complete
+
+GET /api/dashboard
+
+GET /api/activities
+
+GET /api/badges
+
+GET /api/challenges
+
+POST /api/challenges/:id/join
+
+POST /api/profile
+
+POST /api/logout if needed
+
+Use authenticated Supabase user information.
+
+Validate all requests.
+
+---
+
+# 37. ENVIRONMENT VARIABLES
+
+Create:
+
+SUPABASE_URL=
+SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+GEMINI_API_KEY=
+
+IMPORTANT:
+
+Never commit secrets.
+
+Never put service-role keys or Gemini keys into frontend JavaScript.
+
+Create:
+
+.env.example
+
+with placeholders.
+
+---
+
+# 38. SUPABASE SETUP
+
+Provide a complete SQL migration file:
+
+supabase/schema.sql
+
+It should:
+
+* Create tables
+* Create indexes
+* Add foreign keys
+* Add default values
+* Enable RLS
+* Create RLS policies
+* Seed badges
+* Seed challenges
+
+Make the SQL safe to run in Supabase.
+
+---
+
+# 39. PROJECT STRUCTURE
+
+Use a clean structure similar to:
+
+src/
+components/
+Navbar.tsx
+Sidebar.tsx
+StatCard.tsx
+EcoScore.tsx
+StreakCard.tsx
+BadgeCard.tsx
+RecommendationCard.tsx
+ChallengeCard.tsx
+ActivityCard.tsx
+LoadingState.tsx
+EmptyState.tsx
+
+pages/
+Landing.tsx
+Login.tsx
+Signup.tsx
+Dashboard.tsx
+Analyse.tsx
+History.tsx
+Challenges.tsx
+Badges.tsx
+Profile.tsx
+Settings.tsx
+
+lib/
+supabase.ts
+api.ts
+utils.ts
+
+services/
+analysisService.ts
+gamificationService.ts
+badgeService.ts
+challengeService.ts
+
+hooks/
+useAuth.ts
+useProfile.ts
+useDashboard.ts
+
+context/
+AuthContext.tsx
+
+server/
+index.ts
+routes/
+services/
+ai/
+
+supabase/
+schema.sql
+
+.env.example
+
+README.md
+
+---
+
+# 40. AUTHENTICATION STATE
+
+Create a global authentication provider.
+
+When the user logs in:
+
+* Store session
+* Load profile
+* Redirect to dashboard
+
+When the user logs out:
+
+* Clear session
+* Redirect to landing page
+
+When session expires:
+
+* Redirect to login
+
+Do not expose private pages to logged-out users.
+
+---
+
+# 41. SECURITY
+
+Important:
+
+* Use Supabase RLS
+* Validate authenticated users
+* Never trust user_id sent from frontend
+* Get user identity from authenticated session
+* Never expose service role key
+* Never expose Gemini API key
+* Validate AI JSON before inserting into database
+* Sanitize user input
+* Handle API failures safely
+
+---
+
+# 42. AI RESPONSE SAFETY
+
+The AI should only provide practical sustainability recommendations.
+
+It should NOT:
+
+* Give dangerous environmental instructions
+* Encourage unsafe activities
+* Invent precise scientific claims
+* Pretend estimates are exact measurements
+
+Recommendations should be realistic for everyday users.
+
+---
+
+# 43. DEMO DATA
+
+Do NOT populate fake activity data for a real user.
+
+However, provide seeded public data for:
+
+* badges
+* challenges
+
+A new user should start with:
+
+Eco Score: 0
+Points: 0
+Streak: 0
+Activities: 0
+Badges: 0
+
+Then everything should grow based on actual interaction.
+
+---
+
+# 44. FIRST-TIME USER EXPERIENCE
+
+After signup:
+
+Show a welcome screen:
+
+"Welcome to EcoWise 🌱"
+
+Then:
+
+"What area would you like to improve first?"
+
+Options:
+
+🚗 Transportation
+⚡ Energy
+💧 Water
+🍎 Food
+🛍️ Shopping
+♻️ Waste
+
+The user can select one or skip.
+
+Save preference if selected.
+
+Then redirect to dashboard.
+
+---
+
+# 45. ACCESSIBILITY
+
+Use:
+
+* Semantic HTML
+* Proper labels
+* Keyboard navigation
+* Accessible buttons
+* Good contrast
+* Alt text
+* Focus states
+
+Do not rely only on color to communicate status.
+
+---
+
+# 46. PERFORMANCE
+
+Keep the app fast.
+
+Avoid unnecessary database requests.
+
+Use loading states.
+
+Cache appropriate dashboard data.
+
+Do not reload the entire page after every action.
+
+Update only the necessary UI.
+
+---
+
+# 47. FINAL TESTING REQUIREMENT
+
+Before considering the project complete, manually test every flow.
+
+Test:
+
+### Authentication
+
+* Signup
+* Login
+* Logout
+* Invalid login
+* Password reset
+
+### Analysis
+
+* Enter activity
+* Click Analyze
+* Receive result
+* Save result
+* Display recommendations
+
+### Completion
+
+* Click Complete
+* Award points
+* Update score
+* Update streak
+* Update dashboard
+* Prevent duplicate points
+
+### Badges
+
+* Complete first activity
+* Unlock badge
+* Display badge
+
+### Challenges
+
+* Join challenge
+* Progress increases
+* Complete challenge
+* Award points
+
+### History
+
+* Activity appears
+* Search works
+* Filters work
+* Details open
+
+### Profile
+
+* Edit profile
+* Save profile
+* Data persists
+
+### Navigation
+
+* Every link works
+* Browser refresh works
+* Protected routes work
+
+### Mobile
+
+* Check all major pages on mobile width
+
+Fix all errors before finishing.
+
+---
+
+# 48. NO PLACEHOLDER BUTTONS
+
+This is extremely important.
+
+Do NOT create buttons such as:
+
+* "Coming Soon"
+* "Learn More" with no action
+* "View Details" with no implementation
+* "Complete" that does nothing
+* "Analyze" that only displays fake text
+* "Save" that doesn't persist
+* "Logout" that doesn't log out
+
+Every button must have a real function.
+
+If a feature is not implemented, remove the button rather than leaving a dead interaction.
+
+---
+
+# 49. README
+
+Create a complete README.md explaining:
+
+* Project overview
+* Features
+* Tech stack
+* Project structure
+* Supabase setup
+* Database setup
+* Environment variables
+* Gemini API setup
+* How to run locally
+* How to run on Replit
+* How authentication works
+* How AI fallback works
+
+Include exact commands.
+
+---
+
+# 50. REPLIT RUN CONFIGURATION
+
+Make sure the application runs with the normal Replit workflow.
+
+The final application should be accessible through the Replit preview.
+
+Configure the correct start command.
+
+Make sure there are no build errors.
+
+---
+
+# 51. IMPORTANT FALLBACK REQUIREMENT
+
+The application must remain usable even if:
+
+* Gemini API key is missing
+* AI request fails
+* There is no activity history
+
+For AI failure:
+
+Use the deterministic recommendation engine.
+
+For empty data:
+
+Use proper empty states.
+
+Never crash the application.
+
+---
+
+# 52. FINAL UI EXPERIENCE
+
+The final website should feel like a polished startup/hackathon product.
+
+Main navigation:
+
+🌱 EcoWise
+
+Dashboard
+Analyse
+History
+Challenges
+Badges
+Profile
+
+Dashboard should visually communicate:
+
+🌱 Eco Score
+🔥 Streak
+⭐ Eco Points
+📊 Activity Progress
+🏆 Badges
+🎯 Challenges
+
+The Analyse page should be the main action.
+
+Make the Analyse button visually prominent.
+
+---
+
+# 53. MOST IMPORTANT USER FLOW TO DEMONSTRATE
+
+I should be able to open the website and demonstrate this entire sequence:
+
+1. Sign up
+2. Enter dashboard
+3. Click "Analyse"
+4. Enter:
+
+"I travel 5 km to college by car every day."
+
+5. Click "Analyze Activity"
+6. See:
+
+Transportation
+Car
+Daily
+Medium Impact
+
+7. See recommendations:
+
+Cycling
+Public Transport
+Carpooling
+
+8. Click:
+
+"Complete Activity"
+
+9. See:
+
++20 XP
+
+10. See streak:
+
+🔥 1 Day Streak
+
+11. See eco score increase
+
+12. See activity appear in History
+
+13. See badge:
+
+🌱 Eco Beginner
+
+14. Return to Dashboard
+
+15. Dashboard should show updated real data.
+
+THIS FLOW MUST WORK END-TO-END.
+
+---
+
+# 54. FINAL REQUIREMENT
+
+Build the complete application now.
+
+Do not just give me code snippets.
+
+Actually create the complete project files.
+
+Install required dependencies.
+
+Create the database integration.
+
+Create the Supabase SQL schema.
+
+Create the frontend.
+
+Create the backend.
+
+Create authentication.
+
+Create AI analysis.
+
+Create fallback analysis.
+
+Create recommendations.
+
+Create points.
+
+Create streaks.
+
+Create badges.
+
+Create challenges.
+
+Create history.
+
+Create profile.
+
+Create dashboard.
+
+Connect all buttons.
+
+Run the application.
+
+Fix compile errors.
+
+Fix runtime errors.
+
+Fix TypeScript errors.
+
+Fix broken routes.
+
+Fix Supabase integration errors.
+
+Test the main user flow.
+
+Only after everything works, provide a concise summary of:
+
+1. What was built
+2. Files created
+3. Supabase setup required
+4. Environment variables required
+5. How to run the application
+6. Any remaining configuration I need to perform
+
+DO NOT stop at a mockup.
+
+BUILD THE FULL WORKING ECO-WISE APPLICATION.
