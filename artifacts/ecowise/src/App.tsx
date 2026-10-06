@@ -272,7 +272,7 @@ function AuthPage({ mode }: { mode: 'login' | 'signup' | 'forgot' }) {
           await setupProfile.mutateAsync({ data: { preferredCategory: category as typeof ActivityCategory[keyof typeof ActivityCategory] } });
         }
         if (data.session) setLocation('/dashboard');
-        else setSuccess('Check your inbox to confirm your email, then come back to log in.');
+        else setError('Email confirmation is still enabled in Supabase. Turn off “Confirm Email” in the Email provider settings to let new accounts continue without an inbox confirmation.');
       } else {
         if (!password) throw new Error('Enter your password.');
         const { error: authError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });

@@ -33,6 +33,7 @@ EcoWise helps people analyze everyday routines, get practical sustainable altern
 - The API uses the public anon key and each verified user's access token; it does not require a service-role key.
 - Recommendation completion is atomic in PostgreSQL so points and streaks cannot be awarded twice for one recommendation.
 - Analysis uses a deterministic keyword engine so the core flow works without an AI provider.
+- EcoWise sign-up should not require email confirmation; Supabase's Email provider must have **Confirm Email** disabled for immediate access.
 
 ## Product
 

@@ -22,7 +22,7 @@ EcoWise helps people turn everyday routines into practical sustainable choices. 
 
 1. Create a Supabase project.
 2. In the Supabase SQL Editor, run `supabase/schema.sql` from this project. This creates the tables, indexes, RLS policies, user profile trigger, seed badges/challenges, and the atomic completion function.
-3. In Supabase Authentication settings, enable email/password sign-in. If email confirmation is enabled, add the app's preview/published URLs to the allowed redirect URLs and confirm the address after signup.
+3. In Supabase Authentication, enable email/password sign-in. For immediate signup and login without an inbox confirmation, turn off **Confirm Email** in the Email provider settings. With this setting off, Supabase treats signup addresses as confirmed, so use it only if unverified addresses are acceptable for your app.
 4. In the Replit project's Secrets, set:
    - `SUPABASE_URL` — the project's URL
    - `SUPABASE_ANON_KEY` — the public anon key
