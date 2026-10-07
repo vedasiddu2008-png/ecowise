@@ -1,0 +1,1 @@
+- [Supabase DB connectivity](supabase-db-connectivity.md) — use the Session Pooler URI for migrations; the direct PostgreSQL URI failed from this workspace.
