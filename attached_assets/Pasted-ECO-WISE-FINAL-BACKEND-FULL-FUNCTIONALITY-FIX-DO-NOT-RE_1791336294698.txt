@@ -1,0 +1,1221 @@
+ECO-WISE — FINAL BACKEND + FULL FUNCTIONALITY FIX
+DO NOT REBUILD THE UI. DO NOT REDESIGN THE WEBSITE.
+
+I already have a working EcoWise frontend with the current visual design shown in the screenshots.
+
+The UI must remain exactly as it is as much as possible.
+
+The current problem is that the backend/data layer is failing:
+- Dashboard shows "A small pause — Your overview isn't available right now"
+- Activity History shows "Your history could not be loaded"
+- Challenges shows "Challenges aren't available right now"
+- Badges shows "Your badges could not be loaded"
+- Analyse page shows "HTTP 500 Internal Server Error: Something went wrong while loading your EcoWise data"
+- Some buttons appear but their backend actions are not completing.
+
+I need you to FIX THE BACKEND AND CONNECT THE EXISTING UI TO SUPABASE.
+
+Do not create a mockup.
+Do not use fake data.
+Do not replace the existing UI.
+Do not remove existing pages.
+Do not create dead buttons.
+
+Every existing button must actually work.
+
+==================================================
+1. FIRST: INSPECT THE EXISTING PROJECT
+==================================================
+
+Before changing anything:
+
+- Inspect the complete existing project structure.
+- Find the current Supabase client.
+- Find all API routes.
+- Find all database queries.
+- Find Dashboard data loading.
+- Find Analyse/Find Ideas logic.
+- Find History loading.
+- Find Challenges loading.
+- Find Badges loading.
+- Find Profile loading.
+- Find authentication logic.
+- Find all TODOs, placeholder functions and mocked responses.
+- Find the exact reason for the HTTP 500 errors.
+
+Do not blindly rewrite the project.
+
+Fix the existing architecture with the smallest necessary changes.
+
+==================================================
+2. SUPABASE MUST BE THE SINGLE SOURCE OF TRUTH
+==================================================
+
+Use the existing Supabase project.
+
+All user-specific information must come from Supabase.
+
+Never hardcode:
+
+- Eco score
+- XP
+- streak
+- activities
+- recommendations
+- badges
+- challenges
+- history
+- profile information
+
+A newly created user should start with:
+
+Eco Score = 0
+Eco Points = 0
+Current Streak = 0
+Longest Streak = 0
+Completed Activities = 0
+Badges = 0
+
+Then these values must increase based on actual user actions.
+
+==================================================
+3. FIX AUTHENTICATION
+==================================================
+
+Use the currently authenticated Supabase user.
+
+Never trust a user_id sent from the frontend.
+
+Always obtain the authenticated user from the Supabase session/token.
+
+Make sure:
+
+LOGIN
+→ successful authentication
+→ dashboard
+
+LOGOUT
+→ Supabase signOut()
+→ landing/login page
+
+Protected routes:
+- /dashboard
+- /analyse
+- /history
+- /challenges
+- /badges
+- /profile
+- /settings
+
+If no valid session exists:
+→ redirect to login.
+
+Do not break the existing login UI.
+
+==================================================
+4. FIX THE DATABASE
+==================================================
+
+Inspect the existing database schema first.
+
+If tables are missing or incorrectly structured, create/fix them.
+
+Required tables:
+
+profiles
+
+activities
+
+recommendations
+
+completed_activities
+
+daily_activity
+
+badges
+
+user_badges
+
+challenges
+
+user_challenges
+
+Use UUIDs and authenticated user IDs.
+
+Required relationships:
+
+profiles.id → auth.users.id
+
+activities.user_id → auth.users.id
+
+recommendations.activity_id → activities.id
+
+recommendations.user_id → auth.users.id
+
+completed_activities.user_id → auth.users.id
+
+user_badges.user_id → auth.users.id
+
+user_badges.badge_id → badges.id
+
+user_challenges.user_id → auth.users.id
+
+user_challenges.challenge_id → challenges.id
+
+==================================================
+5. SUPABASE RLS
+==================================================
+
+Enable Row Level Security.
+
+Users can only access their own:
+
+- profile
+- activities
+- recommendations
+- completed activities
+- daily activity
+- user badges
+- user challenges
+
+Public/shared records:
+
+- badges
+- challenges
+
+Do not disable RLS just to make the application work.
+
+Fix the policies correctly.
+
+==================================================
+6. DASHBOARD MUST ACTUALLY LOAD
+==================================================
+
+The dashboard screenshot currently shows:
+
+"A small pause
+Your overview isn't available right now."
+
+Fix the API/database query causing this.
+
+Dashboard must load real data for the logged-in user.
+
+Display:
+
+Welcome back, [user name]
+
+Eco Score
+Current Streak
+Eco Points
+Completed Activities
+Longest Streak
+Badges
+
+All values must come from Supabase.
+
+If there is no data yet, display:
+
+0
+
+instead of throwing an error.
+
+IMPORTANT:
+
+An empty database is NOT an error.
+
+For example:
+
+new user:
+Eco Score = 0
+Streak = 0
+XP = 0
+Activities = 0
+
+The dashboard should still load successfully.
+
+==================================================
+7. DAILY ACTIVITY — VERY IMPORTANT
+==================================================
+
+When the user opens the Dashboard, include a working:
+
+"Today's Activity"
+
+or
+
+"Daily Activity"
+
+section.
+
+This section must NOT be static.
+
+Every day, generate/display a useful sustainable activity recommendation.
+
+Example:
+
+TODAY'S GREENER CHOICE 🌱
+
+"Try a greener way to get to college"
+
+Recommendation:
+
+"If your destination is nearby, consider walking, cycling, carpooling, or public transport instead of travelling alone by car."
+
+Then show:
+
+Category:
+Transportation
+
+Difficulty:
+Easy
+
+Eco Points:
++20 XP
+
+Button:
+
+"Complete Activity"
+
+This recommendation must be stored/associated with the user's daily activity when appropriate.
+
+==================================================
+8. DAILY ACTIVITY TITLE MUST CHANGE
+==================================================
+
+Generate a suitable title based on the activity/category.
+
+Examples:
+
+Transportation:
+"Take the greener route today"
+
+Energy:
+"Give your energy use a little break"
+
+Water:
+"Make every drop count"
+
+Waste:
+"Choose reuse today"
+
+Shopping:
+"Shop with the planet in mind"
+
+Food:
+"Make a greener food choice today"
+
+General:
+"One small green choice for today"
+
+The dashboard should show:
+
+TODAY'S GREENER CHOICE
+
+[Dynamic title]
+
+[Recommendation]
+
+[Complete Activity]
+
+The recommendation should be practical and realistic.
+
+==================================================
+9. PERSONALIZED DAILY RECOMMENDATIONS
+==================================================
+
+The Daily Activity should consider the user's previous activities.
+
+For example:
+
+If the user recently analyzed:
+
+"I go to college every day by car"
+
+then the dashboard can suggest:
+
+TODAY'S GREENER CHOICE
+
+"Try a greener commute"
+
+"Consider walking, cycling, public transport, or carpooling when practical."
+
++20 XP
+
+Complete Activity
+
+Do not repeatedly show the exact same recommendation every day if alternatives are available.
+
+Rotate recommendations by category.
+
+==================================================
+10. ANALYSE PAGE — MUST WORK
+==================================================
+
+The current Analyse page contains:
+
+"What does this look like for you?"
+
+"Describe your routine"
+
+Text box
+
+"Find ideas"
+
+The existing UI is good.
+
+DO NOT redesign it.
+
+When the user enters:
+
+"I go to college every day by car"
+
+and clicks:
+
+"Find ideas"
+
+the application must:
+
+1. Validate the text.
+2. Show loading state.
+3. Send it to the backend.
+4. Analyze the activity.
+5. Determine category.
+6. Determine current behavior.
+7. Determine frequency.
+8. Determine environmental impact level.
+9. Generate sustainable alternatives.
+10. Save the activity in Supabase.
+11. Save recommendations in Supabase.
+12. Return the result to the frontend.
+13. Display the recommendations.
+
+==================================================
+11. AI ANALYSIS
+==================================================
+
+If GEMINI_API_KEY exists:
+
+Use Gemini on the SERVER ONLY.
+
+Never expose GEMINI_API_KEY in frontend code.
+
+Ask Gemini to return structured JSON.
+
+Example:
+
+{
+  "category": "Transportation",
+  "activity_name": "Travel to college",
+  "current_choice": "Car",
+  "frequency": "Daily",
+  "impact_level": "Medium",
+  "title": "Try a greener commute",
+  "analysis": "Daily car travel can be replaced by lower-impact options when practical.",
+  "recommendations": [
+    {
+      "title": "Try cycling",
+      "description": "Use a bicycle for short-distance trips when practical.",
+      "difficulty": "Easy",
+      "points": 20
+    },
+    {
+      "title": "Use public transport",
+      "description": "Choose public transport instead of travelling alone by car.",
+      "difficulty": "Easy",
+      "points": 15
+    },
+    {
+      "title": "Try carpooling",
+      "description": "Share the journey with others travelling in the same direction.",
+      "difficulty": "Easy",
+      "points": 15
+    }
+  ]
+}
+
+Validate the JSON before using it.
+
+==================================================
+12. VERY IMPORTANT AI FALLBACK
+==================================================
+
+The website MUST continue working even if Gemini is unavailable.
+
+If:
+
+- GEMINI_API_KEY is missing
+- Gemini request fails
+- Gemini returns invalid JSON
+- API times out
+
+use a deterministic fallback recommendation engine.
+
+Examples:
+
+car / driving / commute / college / travel
+→ Transportation
+
+light / fan / AC / electricity
+→ Energy
+
+water / tap / shower
+→ Water
+
+plastic / bottle / bag / recycle
+→ Waste or Shopping
+
+food / meat / meals / food waste
+→ Food
+
+shopping / clothes / products
+→ Shopping
+
+This fallback must return real recommendations.
+
+The Analyse button must NEVER result in a 500 simply because Gemini is unavailable.
+
+==================================================
+13. COMPLETE ACTIVITY BUTTON
+==================================================
+
+Every recommendation must have a working:
+
+"Complete Activity"
+
+button.
+
+When clicked:
+
+1. Verify authenticated user.
+2. Verify recommendation belongs to that user or is a valid daily recommendation.
+3. Prevent duplicate completion.
+4. Insert completion into completed_activities.
+5. Award points exactly once.
+6. Update profile.total_points.
+7. Update profile.eco_score.
+8. Update profile.total_activities.
+9. Update daily_activity.
+10. Update current streak.
+11. Update longest streak.
+12. Check badges.
+13. Update challenges.
+14. Refresh dashboard data.
+15. Show success toast.
+
+Example:
+
++20 XP 🌱
+
+==================================================
+14. PREVENT DOUBLE POINTS
+==================================================
+
+This is critical.
+
+If the user clicks:
+
+Complete Activity
+Complete Activity
+Complete Activity
+
+three times:
+
+DO NOT give points three times.
+
+The same recommendation/day should only be credited once.
+
+Disable the button while processing.
+
+After completion:
+
+✓ Completed
+
+==================================================
+15. STREAK LOGIC
+==================================================
+
+Streak means:
+
+The user completes at least one sustainable activity on a calendar day.
+
+If user completes an activity today:
+
+and previous activity was yesterday:
+
+current_streak += 1
+
+If previous activity was earlier than yesterday:
+
+current_streak = 1
+
+If user completes multiple activities on the same day:
+
+DO NOT increase streak multiple times.
+
+Update:
+
+current_streak
+longest_streak
+last_activity_date
+
+Example:
+
+Monday → activity → streak 1
+Tuesday → activity → streak 2
+Wednesday → activity → streak 3
+
+==================================================
+16. DAILY ACTIVITY SHOULD BE BACKED BY DATA
+==================================================
+
+Create/maintain daily_activity records.
+
+Fields:
+
+id
+user_id
+activity_date
+activity_count
+points
+completed
+
+The dashboard should query today's record.
+
+If no record exists:
+
+generate today's recommended activity.
+
+When completed:
+
+mark it completed.
+
+After refresh:
+
+the completion must still be there.
+
+After logout/login:
+
+the completion must still be there.
+
+==================================================
+17. HISTORY PAGE
+==================================================
+
+Current screenshot shows:
+
+"Activity history"
+
+Search activities
+
+Filter by category
+
+"New analysis"
+
+Make all of these work.
+
+History should load real activities from Supabase.
+
+If there are no activities:
+
+show:
+
+"No activities yet."
+
+and:
+
+"New analysis"
+
+must navigate to /analyse.
+
+Search must filter activities.
+
+Category filter must work.
+
+Categories:
+
+All
+Transportation
+Energy
+Water
+Food
+Shopping
+Waste
+Lifestyle
+Other
+
+Clicking an activity should show its details/recommendations.
+
+==================================================
+18. CHALLENGES PAGE
+==================================================
+
+Current screenshot shows:
+
+"Challenges"
+
+"Challenges aren't available right now."
+
+Fix the backend.
+
+Challenges must load from Supabase.
+
+Seed useful challenges such as:
+
+7-Day Green Travel
+Plastic-Free Week
+Energy Saver
+Water Saver
+Walk More
+Waste Reduction
+
+Each challenge should show:
+
+Title
+Description
+Progress
+Target
+Points
+Status
+
+Example:
+
+7-Day Green Travel
+
+3 / 7 completed
+
++100 XP
+
+Button:
+
+"Join Challenge"
+
+If already joined:
+
+"Joined"
+
+If completed:
+
+"Completed ✓"
+
+The button must actually work.
+
+==================================================
+19. CHALLENGE PROGRESS
+==================================================
+
+When a user completes a relevant activity:
+
+update user_challenges.progress.
+
+Example:
+
+Green Travel challenge
+
+Transportation activity completed
+
+progress:
+3 → 4
+
+When target is reached:
+
+completed = true
+
+Award challenge points exactly once.
+
+Show:
+
+🏆 Challenge completed!
+
+==================================================
+20. BADGES PAGE
+==================================================
+
+Current screenshot shows:
+
+"Badges"
+
+"Your badges could not be loaded."
+
+Fix it.
+
+Load badge definitions from Supabase.
+
+Display:
+
+Earned badges
+
+Locked badges
+
+Progress
+
+Examples:
+
+🌱 Eco Beginner
+Complete first sustainable activity
+
+🌿 Green Starter
+Complete 3 sustainable activities
+
+🔥 Eco Warrior
+Reach a 7-day streak
+
+♻️ Waste Reducer
+Complete 10 waste-related activities
+
+🚲 Green Traveler
+Complete 10 transportation activities
+
+⚡ Energy Saver
+Complete 10 energy activities
+
+💧 Water Saver
+Complete 10 water activities
+
+🌍 Planet Protector
+Earn 1000 XP
+
+==================================================
+21. AUTOMATIC BADGE UNLOCKING
+==================================================
+
+After every completed activity:
+
+run:
+
+checkBadgeEligibility()
+
+If the requirement is reached:
+
+insert into user_badges
+
+ONLY if it doesn't already exist.
+
+Show a success message:
+
+🏆 New badge unlocked!
+
+Do not duplicate badges.
+
+==================================================
+22. PROFILE
+==================================================
+
+Make profile data load from Supabase.
+
+Display:
+
+Name
+Email
+Eco Score
+XP
+Current Streak
+Longest Streak
+Activities
+Badges
+
+If editing is already present:
+
+Save button must update Supabase.
+
+After refresh, changes must remain.
+
+==================================================
+23. EVERY BUTTON MUST WORK
+==================================================
+
+Audit the ENTIRE WEBSITE.
+
+Buttons currently visible or likely present include:
+
+Login
+Signup
+Logout
+Find Ideas
+Analyze
+Complete Activity
+Try Again
+New Analysis
+Search
+Category Filter
+Join Challenge
+View Challenge
+Profile
+Save
+Settings
+Navigation menu
+Dashboard
+History
+Challenges
+Badges
+Analyse
+Daily Activity
+Back
+etc.
+
+For EVERY button:
+
+- identify intended action
+- implement action
+- connect backend if required
+- add loading state
+- add error state
+- update UI
+- persist data when required
+
+There must be ZERO dead buttons.
+
+If "Try again" exists:
+→ repeat the failed request.
+
+If "New analysis" exists:
+→ /analyse.
+
+If "Find ideas" exists:
+→ run analysis.
+
+If "Complete Activity" exists:
+→ save completion.
+
+If "Join Challenge" exists:
+→ create user_challenges record.
+
+If "Logout" exists:
+→ actually sign out.
+
+==================================================
+24. HTTP 500 ERROR HANDLING
+==================================================
+
+Do NOT simply hide the error.
+
+Find the actual backend cause.
+
+Check:
+
+- Supabase URL
+- Supabase anon key
+- environment variables
+- database table names
+- column names
+- foreign keys
+- RLS policies
+- authenticated session
+- API routes
+- server errors
+- JSON parsing
+- null handling
+
+Every backend endpoint must have proper try/catch handling.
+
+Return meaningful HTTP status codes.
+
+Do not expose internal database errors to users.
+
+Log detailed errors SERVER-SIDE so they can be debugged.
+
+Frontend should show friendly messages.
+
+==================================================
+25. IMPORTANT EMPTY DATA RULE
+==================================================
+
+An empty result is NOT an error.
+
+For example:
+
+No badges yet:
+→ display locked badges.
+
+No history:
+→ display empty history state.
+
+No challenges joined:
+→ display available challenges.
+
+No activities:
+→ show today's recommended activity.
+
+No dashboard records:
+→ show zero values.
+
+Never return HTTP 500 simply because the user has no data.
+
+==================================================
+26. DASHBOARD REFRESH
+==================================================
+
+After any action such as:
+
+Complete Activity
+Join Challenge
+Complete Challenge
+New Analysis
+Earn Badge
+
+refresh the relevant dashboard data automatically.
+
+Do not require the user to manually reload the browser.
+
+==================================================
+27. TODAY'S RECOMMENDATION EXAMPLE
+==================================================
+
+For a user whose recent activity is:
+
+"I go to college every day by car"
+
+Dashboard can show:
+
+TODAY'S GREENER CHOICE
+
+"Try a greener commute"
+
+"You usually travel to college by car. When practical, try walking, cycling, public transport, or carpooling."
+
+🌱 Transportation
+
+Easy
+
++20 XP
+
+[ Complete Activity ]
+
+This should be dynamic.
+
+If the user has recently focused on transportation, choose another useful category when possible.
+
+==================================================
+28. API DESIGN
+==================================================
+
+Use clean backend endpoints/functions.
+
+Examples:
+
+GET /api/dashboard
+
+GET /api/daily-activity
+
+POST /api/analyze
+
+POST /api/recommendations/:id/complete
+
+GET /api/history
+
+GET /api/challenges
+
+POST /api/challenges/:id/join
+
+GET /api/badges
+
+GET /api/profile
+
+PUT /api/profile
+
+Use the authenticated Supabase user.
+
+Do not trust user_id from request body.
+
+==================================================
+29. DATABASE TRANSACTIONS / CONSISTENCY
+==================================================
+
+Where possible, make completion updates atomic.
+
+When completing an activity, these related changes should stay consistent:
+
+completed_activities
+profile points
+profile score
+activity count
+daily_activity
+streak
+badges
+challenge progress
+
+Avoid situations where XP updates but completion isn't saved.
+
+==================================================
+30. FRONTEND ERROR STATES
+==================================================
+
+Keep the existing attractive "A small pause" UI.
+
+But only show it when there is a real error.
+
+If there is simply no data:
+
+show a useful empty state instead.
+
+For example:
+
+NO ACTIVITIES:
+
+"Your greener journey starts here."
+
+[ New analysis ]
+
+DAILY ACTIVITY:
+
+"Here's one small thing you can try today."
+
+==================================================
+31. DO NOT CHANGE THE VISUAL DESIGN
+==================================================
+
+The screenshots show the desired EcoWise visual style.
+
+Preserve:
+
+- green theme
+- rounded cards
+- typography
+- spacing
+- header
+- logo
+- navigation
+- page titles
+- existing layouts
+- existing buttons
+- existing animations
+
+Only modify UI where necessary to display backend data.
+
+Do NOT redesign the application.
+
+==================================================
+32. PERFORMANCE
+==================================================
+
+Do not make unnecessary repeated Supabase requests.
+
+Use one dashboard data-loading function where possible.
+
+Avoid infinite loops caused by React effects.
+
+Do not reload the entire page after every action.
+
+Use local state/query invalidation to update the UI.
+
+==================================================
+33. SECURITY
+==================================================
+
+Never expose:
+
+SUPABASE_SERVICE_ROLE_KEY
+GEMINI_API_KEY
+
+in frontend code.
+
+Use environment variables.
+
+Use RLS.
+
+Use authenticated Supabase sessions.
+
+Validate all incoming data.
+
+==================================================
+34. FINAL TEST
+==================================================
+
+After implementing the fixes, test this exact flow:
+
+1. Login.
+2. Open Dashboard.
+3. Dashboard loads without HTTP 500.
+4. Today's Activity appears.
+5. Click Analyse.
+6. Enter:
+
+"I go to college every day by car"
+
+7. Click Find Ideas.
+8. Recommendations appear.
+9. Activity is saved.
+10. Click Complete Activity.
+11. +XP appears.
+12. Eco Score changes.
+13. Streak becomes 1.
+14. Eco Beginner badge unlocks.
+15. Activity appears in History.
+16. Open Challenges.
+17. Challenges load.
+18. Join a challenge.
+19. Open Badges.
+20. Badges load.
+21. Open Dashboard again.
+22. All updated information remains.
+23. Refresh browser.
+24. Data is still present.
+25. Logout.
+26. Login again.
+27. Data is still present.
+
+Then test with:
+
+- no activities
+- no badges
+- no challenges joined
+- Gemini API missing
+- invalid activity input
+- duplicate Complete Activity clicks
+- expired session
+
+The application must not crash.
+
+==================================================
+35. FINAL COMMAND
+==================================================
+
+Do not stop after identifying the problem.
+
+Actually fix the backend.
+
+Actually connect Supabase.
+
+Actually fix the HTTP 500 errors.
+
+Actually make every button functional.
+
+Actually test the application.
+
+Do not rebuild the existing frontend.
+
+Do not replace the UI with a new design.
+
+Do not use fake/mock data for user-specific information.
+
+The final result must be a fully functional EcoWise application where:
+
+USER INPUT
+↓
+AI / FALLBACK ANALYSIS
+↓
+PERSONALIZED RECOMMENDATIONS
+↓
+DAILY ACTIVITY
+↓
+COMPLETE ACTIVITY
+↓
+XP
+↓
+ECO SCORE
+↓
+STREAK
+↓
+BADGES
+↓
+CHALLENGES
+↓
+HISTORY
+↓
+DASHBOARD
+
+Everything must persist through Supabase and continue working after refresh and login again.
+
+IMPORTANT:
+Use the existing project and existing UI.
+Make the smallest necessary backend fixes.
+Do not waste credits rebuilding components that already work.

@@ -51,7 +51,8 @@ export interface AnalyzeActivityInput {
 
 export interface Recommendation {
   id: string;
-  activityId: string;
+  /** @nullable */
+  activityId: string | null;
   title: string;
   description: string;
   category: ActivityCategory;
@@ -163,8 +164,19 @@ export interface PointDay {
   points: number;
 }
 
+export interface DailyActivity {
+  activityDate: string;
+  /** @minimum 0 */
+  activityCount: number;
+  /** @minimum 0 */
+  points: number;
+  completed: boolean;
+  recommendation: Recommendation;
+}
+
 export interface Dashboard {
   profile: Profile;
+  dailyActivity: DailyActivity;
   weeklyActivity: WeeklyActivity[];
   categoryBreakdown: CategoryCount[];
   recentActivities: ActivityRecord[];
@@ -173,11 +185,19 @@ export interface Dashboard {
   pointsHistory: PointDay[];
 }
 
+export type CompletionResultCompletedChallengesItem = {
+  id: string;
+  title: string;
+};
+
 export interface CompletionResult {
   recommendation: Recommendation;
   profile: Profile;
   newBadges: Badge[];
   updatedChallenges: ChallengeProgress[];
+  /** @minimum 0 */
+  challengeBonus: number;
+  completedChallenges: CompletionResultCompletedChallengesItem[];
 }
 
 export type GetActivitiesParams = {

@@ -284,7 +284,7 @@ components:
         - createdAt
       properties:
         id: { type: string, format: uuid }
-        activityId: { type: string, format: uuid }
+        activityId: { type: [string, "null"], format: uuid }
         title: { type: string }
         description: { type: string }
         category: { $ref: "#/components/schemas/ActivityCategory" }
@@ -434,10 +434,20 @@ components:
       properties:
         date: { type: string, format: date }
         points: { type: integer }
+    DailyActivity:
+      type: object
+      required: [activityDate, activityCount, points, completed, recommendation]
+      properties:
+        activityDate: { type: string, format: date }
+        activityCount: { type: integer, minimum: 0 }
+        points: { type: integer, minimum: 0 }
+        completed: { type: boolean }
+        recommendation: { $ref: "#/components/schemas/Recommendation" }
     Dashboard:
       type: object
       required:
         - profile
+        - dailyActivity
         - weeklyActivity
         - categoryBreakdown
         - recentActivities
@@ -446,6 +456,7 @@ components:
         - pointsHistory
       properties:
         profile: { $ref: "#/components/schemas/Profile" }
+        dailyActivity: { $ref: "#/components/schemas/DailyActivity" }
         weeklyActivity:
           type: array
           items: { $ref: "#/components/schemas/WeeklyActivity" }
@@ -466,7 +477,13 @@ components:
           items: { $ref: "#/components/schemas/PointDay" }
     CompletionResult:
       type: object
-      required: [recommendation, profile, newBadges, updatedChallenges]
+      required:
+        - recommendation
+        - profile
+        - newBadges
+        - updatedChallenges
+        - challengeBonus
+        - completedChallenges
       properties:
         recommendation: { $ref: "#/components/schemas/Recommendation" }
         profile: { $ref: "#/components/schemas/Profile" }
@@ -476,3 +493,12 @@ components:
         updatedChallenges:
           type: array
           items: { $ref: "#/components/schemas/ChallengeProgress" }
+        challengeBonus: { type: integer, minimum: 0 }
+        completedChallenges:
+          type: array
+          items:
+            type: object
+            required: [id, title]
+            properties:
+              id: { type: string, format: uuid }
+              title: { type: string }

@@ -15,6 +15,8 @@ export * from './badgeProgress';
 export * from './categoryCount';
 export * from './challengeProgress';
 export * from './completionResult';
+export * from './completionResultCompletedChallengesItem';
+export * from './dailyActivity';
 export * from './dashboard';
 export * from './difficulty';
 export * from './getActivitiesParams';

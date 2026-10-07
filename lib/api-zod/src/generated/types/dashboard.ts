@@ -9,12 +9,14 @@ import type { ActivityRecord } from './activityRecord';
 import type { Badge } from './badge';
 import type { CategoryCount } from './categoryCount';
 import type { ChallengeProgress } from './challengeProgress';
+import type { DailyActivity } from './dailyActivity';
 import type { PointDay } from './pointDay';
 import type { Profile } from './profile';
 import type { WeeklyActivity } from './weeklyActivity';
 
 export interface Dashboard {
   profile: Profile;
+  dailyActivity: DailyActivity;
   weeklyActivity: WeeklyActivity[];
   categoryBreakdown: CategoryCount[];
   recentActivities: ActivityRecord[];

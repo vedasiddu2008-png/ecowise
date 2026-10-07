@@ -10,7 +10,8 @@ import type { Difficulty } from './difficulty';
 
 export interface Recommendation {
   id: string;
-  activityId: string;
+  /** @nullable */
+  activityId: string | null;
   title: string;
   description: string;
   category: ActivityCategory;

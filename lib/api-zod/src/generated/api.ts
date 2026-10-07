@@ -43,7 +43,7 @@ export const AnalyzeActivityResponse = zod.object({
   "pointsEarned": zod.number().int(),
   "recommendations": zod.array(zod.object({
   "id": zod.string().uuid(),
-  "activityId": zod.string().uuid(),
+  "activityId": zod.string().uuid().nullable(),
   "title": zod.string(),
   "description": zod.string(),
   "category": zod.enum(['Transportation', 'Energy', 'Water', 'Food', 'Shopping', 'Waste', 'Lifestyle', 'Other']),
@@ -71,6 +71,10 @@ export const getDashboardResponseProfileLongestStreakMin = 0;
 
 export const getDashboardResponseProfileTotalActivitiesMin = 0;
 
+export const getDashboardResponseDailyActivityActivityCountMin = 0;
+
+export const getDashboardResponseDailyActivityPointsMin = 0;
+
 export const getDashboardResponseActiveChallengesItemProgressMin = 0;
 
 
@@ -88,6 +92,24 @@ export const GetDashboardResponse = zod.object({
   "totalActivities": zod.number().int().min(getDashboardResponseProfileTotalActivitiesMin),
   "lastActivityDate": zod.coerce.date().nullable(),
   "preferredCategory": zod.union([zod.enum(['Transportation', 'Energy', 'Water', 'Food', 'Shopping', 'Waste', 'Lifestyle', 'Other']),zod.null()])
+}),
+  "dailyActivity": zod.object({
+  "activityDate": zod.coerce.date(),
+  "activityCount": zod.number().int().min(getDashboardResponseDailyActivityActivityCountMin),
+  "points": zod.number().int().min(getDashboardResponseDailyActivityPointsMin),
+  "completed": zod.boolean(),
+  "recommendation": zod.object({
+  "id": zod.string().uuid(),
+  "activityId": zod.string().uuid().nullable(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "category": zod.enum(['Transportation', 'Energy', 'Water', 'Food', 'Shopping', 'Waste', 'Lifestyle', 'Other']),
+  "difficulty": zod.enum(['Easy', 'Moderate', 'Challenging']),
+  "points": zod.number().int(),
+  "estimatedImpact": zod.string(),
+  "isCompleted": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
 }),
   "weeklyActivity": zod.array(zod.object({
   "date": zod.coerce.date(),
@@ -111,7 +133,7 @@ export const GetDashboardResponse = zod.object({
   "pointsEarned": zod.number().int(),
   "recommendations": zod.array(zod.object({
   "id": zod.string().uuid(),
-  "activityId": zod.string().uuid(),
+  "activityId": zod.string().uuid().nullable(),
   "title": zod.string(),
   "description": zod.string(),
   "category": zod.enum(['Transportation', 'Energy', 'Water', 'Food', 'Shopping', 'Waste', 'Lifestyle', 'Other']),
@@ -173,7 +195,7 @@ export const GetActivitiesResponseItem = zod.object({
   "pointsEarned": zod.number().int(),
   "recommendations": zod.array(zod.object({
   "id": zod.string().uuid(),
-  "activityId": zod.string().uuid(),
+  "activityId": zod.string().uuid().nullable(),
   "title": zod.string(),
   "description": zod.string(),
   "category": zod.enum(['Transportation', 'Energy', 'Water', 'Food', 'Shopping', 'Waste', 'Lifestyle', 'Other']),
@@ -207,7 +229,7 @@ export const GetActivityResponse = zod.object({
   "pointsEarned": zod.number().int(),
   "recommendations": zod.array(zod.object({
   "id": zod.string().uuid(),
-  "activityId": zod.string().uuid(),
+  "activityId": zod.string().uuid().nullable(),
   "title": zod.string(),
   "description": zod.string(),
   "category": zod.enum(['Transportation', 'Energy', 'Water', 'Food', 'Shopping', 'Waste', 'Lifestyle', 'Other']),
@@ -240,12 +262,14 @@ export const completeRecommendationResponseProfileTotalActivitiesMin = 0;
 
 export const completeRecommendationResponseUpdatedChallengesItemProgressMin = 0;
 
+export const completeRecommendationResponseChallengeBonusMin = 0;
+
 
 
 export const CompleteRecommendationResponse = zod.object({
   "recommendation": zod.object({
   "id": zod.string().uuid(),
-  "activityId": zod.string().uuid(),
+  "activityId": zod.string().uuid().nullable(),
   "title": zod.string(),
   "description": zod.string(),
   "category": zod.enum(['Transportation', 'Energy', 'Water', 'Food', 'Shopping', 'Waste', 'Lifestyle', 'Other']),
@@ -286,6 +310,11 @@ export const CompleteRecommendationResponse = zod.object({
   "progress": zod.number().int().min(completeRecommendationResponseUpdatedChallengesItemProgressMin),
   "completed": zod.boolean(),
   "startedAt": zod.coerce.date().nullable()
+})),
+  "challengeBonus": zod.number().int().min(completeRecommendationResponseChallengeBonusMin),
+  "completedChallenges": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "title": zod.string()
 }))
 })
 

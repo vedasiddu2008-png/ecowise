@@ -1,6 +1,6 @@
 import { type ButtonHTMLAttributes, type FormEvent, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes, createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
-import { createClient, type Session } from '@supabase/supabase-js';
+import { createClient, type Session, type SupabaseClient } from '@supabase/supabase-js';
 import {
   Activity, ArrowRight, Award, BarChart3, Bike, Check,
   CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, CircleHelp, Clock3, Flame,
@@ -21,10 +21,12 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } } });
-const supabase = createClient(
+const browserGlobal = globalThis as typeof globalThis & { __ecowiseSupabaseClient?: SupabaseClient };
+const supabase = browserGlobal.__ecowiseSupabaseClient ?? createClient(
   import.meta.env.VITE_SUPABASE_URL || 'https://missing-supabase-url.invalid',
   import.meta.env.VITE_SUPABASE_ANON_KEY || 'missing-public-anon-key',
 );
+browserGlobal.__ecowiseSupabaseClient = supabase;
 setAuthTokenGetter(async () => (await supabase.auth.getSession()).data.session?.access_token ?? null);
 
 type AuthState = { session: Session | null; loading: boolean };
@@ -79,6 +81,15 @@ function LoadingPanel({ label = 'Loading your data…' }: { label?: string }) {
 }
 function ErrorPanel({ onRetry, message = 'We couldn’t load this just now.' }: { onRetry: () => void; message?: string }) {
   return <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-rose-950" role="alert"><div className="flex items-start gap-3"><CircleHelp size={20} className="mt-0.5 shrink-0 text-rose-700" /><div><h3 className="font-bold">A small pause</h3><p className="mt-1 text-sm text-rose-900/70">{message}</p><Btn variant="outline" className="mt-4 border-rose-200 text-rose-900" onClick={onRetry}>Try again</Btn></div></div></div>;
+}
+function apiErrorMessage(error: unknown, fallback: string) {
+  if (error && typeof error === 'object' && 'data' in error) {
+    const data = (error as { data?: unknown }).data;
+    if (data && typeof data === 'object' && 'error' in data && typeof data.error === 'string') {
+      return data.error;
+    }
+  }
+  return error instanceof Error ? error.message : fallback;
 }
 function EmptyState({ icon: Icon = Sprout, title, detail, action }: { icon?: typeof Leaf; title: string; detail: string; action?: ReactNode }) {
   return <div className="grid min-h-52 place-items-center rounded-2xl border border-dashed border-emerald-200 bg-[#fbfdfb] px-6 py-10 text-center"><div className="max-w-sm"><span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-emerald-100 text-emerald-800"><Icon size={22} /></span><h3 className="mt-4 font-display text-lg font-bold text-emerald-950">{title}</h3><p className="mt-1 text-sm leading-6 text-emerald-900/60">{detail}</p>{action && <div className="mt-4">{action}</div>}</div></div>;
@@ -314,15 +325,63 @@ function AuthPage({ mode }: { mode: 'login' | 'signup' | 'forgot' }) {
 
 function DashboardPage() {
   const query = useGetDashboard();
+  const complete = useCompleteRecommendation();
+  const queryClient = useQueryClient();
+  const { notice, notify } = useNotice();
+  const [completionMessage, setCompletionMessage] = useState('');
   const dashboard = query.data;
   if (query.isLoading) return <LoadingPanel />;
-  if (query.isError || !dashboard) return <ErrorPanel onRetry={() => query.refetch()} message="Your overview isn’t available right now. Your saved data hasn’t been changed." />;
-  const { profile, weeklyActivity, categoryBreakdown, recentActivities, earnedBadges, activeChallenges, pointsHistory } = dashboard;
+  if (query.isError || !dashboard) return <ErrorPanel onRetry={() => query.refetch()} message={apiErrorMessage(query.error, "Your overview isn’t available right now. Your saved data hasn’t been changed.")} />;
+  const { profile, dailyActivity, weeklyActivity, categoryBreakdown, recentActivities, earnedBadges, activeChallenges, pointsHistory } = dashboard;
   const weeklyMax = Math.max(1, ...weeklyActivity.map(item => item.activityCount));
   const pointsMax = Math.max(1, ...pointsHistory.map(item => item.points));
   const categoryTotal = categoryBreakdown.reduce((sum, item) => sum + item.count, 0);
+  async function completeDailyActivity() {
+    try {
+      const response = await complete.mutateAsync({
+        recommendationId: dailyActivity.recommendation.id,
+      });
+      const messages = [
+        `You earned ${response.recommendation.points} points.`,
+        response.challengeBonus > 0
+          ? `Challenge bonus: ${response.challengeBonus} points.`
+          : '',
+        response.completedChallenges.length
+          ? `Challenge completed: ${response.completedChallenges.map(item => item.title).join(', ')}.`
+          : '',
+        response.newBadges.length
+          ? `New badge${response.newBadges.length === 1 ? '' : 's'}: ${response.newBadges.map(item => item.name).join(', ')}.`
+          : '',
+      ].filter(Boolean);
+      setCompletionMessage(messages.join(' '));
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: getGetDashboardQueryKey() }),
+        queryClient.invalidateQueries({ queryKey: getGetBadgesQueryKey() }),
+        queryClient.invalidateQueries({ queryKey: getGetChallengesQueryKey() }),
+      ]);
+    } catch (error) {
+      notify(error instanceof Error ? error.message : 'We couldn’t update your progress. Try again.', 'error');
+    }
+  }
   return <div className="page-enter">
     <div className="mb-7 flex flex-wrap items-end justify-between gap-4"><div><p className="mb-2 text-xs font-bold uppercase tracking-[.16em] text-emerald-700">Your EcoWise overview</p><h1 className="font-display text-3xl font-extrabold tracking-[-.06em] text-emerald-950 sm:text-[38px]">Hello, {profile.fullName.split(' ')[0] || 'there'}.</h1><p className="mt-2 text-sm text-emerald-900/60">Here’s the progress you’ve made in your own rhythm.</p></div><Link href="/analyse" className="inline-flex h-11 items-center gap-2 rounded-xl bg-emerald-800 px-4 font-bold text-white shadow-sm hover:bg-emerald-900"><Sparkles size={16} />Explore an activity</Link></div>
+    <Panel title="Today’s activity" subtitle={`A practical idea based on your preferences and recent routines · ${dailyActivity.points} points earned today`} className="mb-5" action={<CategoryTag category={dailyActivity.recommendation.category} />}>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <h3 className="font-display text-lg font-extrabold text-emerald-950">{dailyActivity.recommendation.title}</h3>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-emerald-950/65">{dailyActivity.recommendation.description}</p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-[#f4f2e7] px-2.5 py-1 text-xs font-semibold text-amber-900">{dailyActivity.recommendation.difficulty}</span>
+            <span className="rounded-full bg-[#e9f5f1] px-2.5 py-1 text-xs font-semibold text-teal-900">{dailyActivity.recommendation.points} points</span>
+            <span className="text-xs text-emerald-900/45">{dailyActivity.recommendation.estimatedImpact}</span>
+          </div>
+        </div>
+        {dailyActivity.completed
+          ? <span className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-emerald-100 px-4 text-sm font-bold text-emerald-800"><CheckCircle2 size={16} />Completed today</span>
+          : <Btn onClick={completeDailyActivity} disabled={complete.isPending} variant="soft" data-testid="button-complete-daily-activity">{complete.isPending ? 'Saving…' : <><Check size={15} />I tried this</>}</Btn>}
+      </div>
+      {completionMessage && <p role="status" className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-900">{completionMessage}</p>}
+    </Panel>
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       {[
         { label: 'Eco score', value: profile.ecoScore, unit: '/ 100', icon: Leaf, color: 'bg-emerald-100 text-emerald-800', note: 'A snapshot of your activity' },
@@ -352,6 +411,7 @@ function DashboardPage() {
         </Panel>
       </div>
     </div>
+    <Notice notice={notice} close={() => notify('', 'success')} />
   </div>;
 }
 
@@ -391,11 +451,19 @@ function AnalysePage() {
     try {
       const response = await complete.mutateAsync({ recommendationId });
       setResult(current => current ? { ...current, recommendations: current.recommendations.map(rec => rec.id === recommendationId ? response.recommendation : rec) } : current);
-      setCompletionMessage(`You earned ${response.recommendation.points} points. Your streak is now ${response.profile.currentStreak} ${response.profile.currentStreak === 1 ? 'day' : 'days'}.${response.newBadges.length ? ` New badge${response.newBadges.length > 1 ? 's' : ''}: ${response.newBadges.map(badge => badge.name).join(', ')}.` : ''}`);
+      setCompletionMessage([
+        `You earned ${response.recommendation.points} points.`,
+        response.challengeBonus > 0 ? `Challenge bonus: ${response.challengeBonus} points.` : '',
+        response.completedChallenges.length ? `Challenge completed: ${response.completedChallenges.map(item => item.title).join(', ')}.` : '',
+        `Your streak is now ${response.profile.currentStreak} ${response.profile.currentStreak === 1 ? 'day' : 'days'}.`,
+        response.newBadges.length ? `New badge${response.newBadges.length > 1 ? 's' : ''}: ${response.newBadges.map(badge => badge.name).join(', ')}.` : '',
+      ].filter(Boolean).join(' '));
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: getGetDashboardQueryKey() }),
         queryClient.invalidateQueries({ queryKey: getGetActivitiesQueryKey() }),
-        queryClient.invalidateQueries({ queryKey: getGetActivityQueryKey(response.recommendation.activityId) }),
+        ...(response.recommendation.activityId
+          ? [queryClient.invalidateQueries({ queryKey: getGetActivityQueryKey(response.recommendation.activityId) })]
+          : []),
         queryClient.invalidateQueries({ queryKey: getGetBadgesQueryKey() }),
         queryClient.invalidateQueries({ queryKey: getGetChallengesQueryKey() }),
       ]);
@@ -444,7 +512,13 @@ function ActivityDetailPage() {
     try {
       const response = await complete.mutateAsync({ recommendationId });
       await Promise.all([client.invalidateQueries({ queryKey: getGetActivityQueryKey(params.id) }), client.invalidateQueries({ queryKey: getGetDashboardQueryKey() }), client.invalidateQueries({ queryKey: getGetActivitiesQueryKey() }), client.invalidateQueries({ queryKey: getGetBadgesQueryKey() }), client.invalidateQueries({ queryKey: getGetChallengesQueryKey() })]);
-      setCompletionMessage(`You earned ${response.recommendation.points} points. Your streak is now ${response.profile.currentStreak} ${response.profile.currentStreak === 1 ? 'day' : 'days'}.${response.newBadges.length ? ` New badge${response.newBadges.length > 1 ? 's' : ''}: ${response.newBadges.map(badge => badge.name).join(', ')}.` : ''}`);
+      setCompletionMessage([
+        `You earned ${response.recommendation.points} points.`,
+        response.challengeBonus > 0 ? `Challenge bonus: ${response.challengeBonus} points.` : '',
+        response.completedChallenges.length ? `Challenge completed: ${response.completedChallenges.map(item => item.title).join(', ')}.` : '',
+        `Your streak is now ${response.profile.currentStreak} ${response.profile.currentStreak === 1 ? 'day' : 'days'}.`,
+        response.newBadges.length ? `New badge${response.newBadges.length > 1 ? 's' : ''}: ${response.newBadges.map(badge => badge.name).join(', ')}.` : '',
+      ].filter(Boolean).join(' '));
     } catch (error) { notify(error instanceof Error ? error.message : 'Could not update your progress.', 'error'); }
   }
   if (query.isLoading) return <LoadingPanel label="Loading activity detail" />;

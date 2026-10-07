@@ -33,6 +33,18 @@ app.use("/api", router);
 
 const errorHandler: ErrorRequestHandler = (error, req, res, _next) => {
   req.log.error({ err: error }, "API request failed");
+  const message = error instanceof Error ? error.message : "";
+  if (
+    /could not find the table .* in the schema cache|relation .* does not exist/i.test(
+      message,
+    )
+  ) {
+    res.status(503).json({
+      error:
+        "EcoWise’s Supabase tables are not set up yet. The project owner needs to run the schema.sql script from the EcoWise project in the Supabase SQL Editor.",
+    });
+    return;
+  }
   res.status(500).json({
     error: "Something went wrong while loading your EcoWise data. Please try again.",
   });

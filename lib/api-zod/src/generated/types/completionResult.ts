@@ -7,6 +7,7 @@
  */
 import type { Badge } from './badge';
 import type { ChallengeProgress } from './challengeProgress';
+import type { CompletionResultCompletedChallengesItem } from './completionResultCompletedChallengesItem';
 import type { Profile } from './profile';
 import type { Recommendation } from './recommendation';
 
@@ -15,4 +16,7 @@ export interface CompletionResult {
   profile: Profile;
   newBadges: Badge[];
   updatedChallenges: ChallengeProgress[];
+  /** @minimum 0 */
+  challengeBonus: number;
+  completedChallenges: CompletionResultCompletedChallengesItem[];
 }

@@ -43,7 +43,7 @@ create table if not exists public.activities (
 
 create table if not exists public.recommendations (
   id uuid primary key default gen_random_uuid(),
-  activity_id uuid not null references public.activities(id) on delete cascade,
+  activity_id uuid references public.activities(id) on delete cascade,
   user_id uuid not null references auth.users(id) on delete cascade,
   title text not null,
   description text not null,
@@ -55,8 +55,14 @@ create table if not exists public.recommendations (
   points integer not null check (points > 0),
   estimated_impact text not null,
   is_completed boolean not null default false,
+  recommendation_date date,
   created_at timestamptz not null default now()
 );
+
+-- Keep this script safe to rerun against an earlier EcoWise schema.
+alter table public.recommendations alter column activity_id drop not null;
+alter table public.recommendations
+  add column if not exists recommendation_date date;
 
 create table if not exists public.completed_activities (
   id uuid primary key default gen_random_uuid(),
@@ -115,8 +121,32 @@ create table if not exists public.daily_activity (
   activity_date date not null default current_date,
   points integer not null default 0 check (points >= 0),
   activity_count integer not null default 0 check (activity_count >= 0),
+  completed boolean not null default false,
+  recommendation_id uuid references public.recommendations(id) on delete set null,
   unique (user_id, activity_date)
 );
+
+alter table public.daily_activity
+  add column if not exists completed boolean not null default false;
+alter table public.daily_activity
+  add column if not exists recommendation_id uuid;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'daily_activity_recommendation_id_fkey'
+      and conrelid = 'public.daily_activity'::regclass
+  ) then
+    alter table public.daily_activity
+      add constraint daily_activity_recommendation_id_fkey
+      foreign key (recommendation_id)
+      references public.recommendations(id)
+      on delete set null;
+  end if;
+end;
+$$;
 
 create index if not exists activities_user_created_idx
   on public.activities (user_id, created_at desc);
@@ -126,6 +156,12 @@ create index if not exists completed_activities_user_date_idx
   on public.completed_activities (user_id, completed_at desc);
 create index if not exists daily_activity_user_date_idx
   on public.daily_activity (user_id, activity_date desc);
+create unique index if not exists recommendations_user_daily_date_uidx
+  on public.recommendations (user_id, recommendation_date)
+  where recommendation_date is not null;
+create unique index if not exists daily_activity_recommendation_id_uidx
+  on public.daily_activity (recommendation_id)
+  where recommendation_id is not null;
 
 create or replace function public.set_updated_at()
 returns trigger
@@ -171,7 +207,7 @@ for each row execute function public.handle_new_user();
 insert into public.badges (name, description, icon, requirement_type, requirement_value)
 values
   ('Eco Beginner', 'Complete your first sustainable action.', 'leaf', 'activity_count', 1),
-  ('Green Starter', 'Earn 100 eco points.', 'sprout', 'total_points', 100),
+  ('Green Starter', 'Complete three sustainable actions.', 'sprout', 'activity_count', 3),
   ('Eco Warrior', 'Keep a 7-day sustainable streak.', 'flame', 'streak_days', 7),
   ('Waste Reducer', 'Complete 10 waste-reduction actions.', 'recycle', 'category:Waste', 10),
   ('Green Traveler', 'Complete 10 sustainable travel actions.', 'bike', 'category:Transportation', 10),
@@ -192,7 +228,8 @@ values
   ('Plastic-Free Week', 'Choose a lower-waste alternative seven times.', 'Waste', 150, 7, 7, true),
   ('Save Energy Challenge', 'Complete five energy-saving actions.', 'Energy', 100, 5, 7, true),
   ('Water Saver Challenge', 'Complete five water-saving actions.', 'Water', 100, 5, 7, true),
-  ('Walk More Challenge', 'Choose a greener trip three times.', 'Transportation', 75, 3, 7, true)
+  ('Walk More Challenge', 'Choose a greener trip three times.', 'Transportation', 75, 3, 7, true),
+  ('Waste Reduction Challenge', 'Complete five waste-reduction actions.', 'Waste', 100, 5, 7, true)
 on conflict (title) do update set
   description = excluded.description,
   category = excluded.category,
@@ -280,6 +317,87 @@ drop policy if exists daily_activity_update_own on public.daily_activity;
 create policy daily_activity_update_own on public.daily_activity for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
 revoke insert, update, delete on public.daily_activity from authenticated;
 
+create or replace function public.ensure_daily_recommendation(
+  p_category text,
+  p_title text,
+  p_description text,
+  p_difficulty text,
+  p_points integer,
+  p_estimated_impact text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, auth
+as $$
+declare
+  v_user_id uuid := auth.uid();
+  v_daily public.daily_activity%rowtype;
+  v_recommendation public.recommendations%rowtype;
+begin
+  if v_user_id is null then
+    raise exception 'authentication_required' using errcode = '28000';
+  end if;
+
+  if p_category not in (
+    'Transportation', 'Energy', 'Water', 'Food', 'Shopping', 'Waste',
+    'Lifestyle', 'Other'
+  ) or p_difficulty not in ('Easy', 'Moderate', 'Challenging')
+     or p_points <= 0 then
+    raise exception 'invalid_daily_recommendation' using errcode = '22023';
+  end if;
+
+  insert into public.daily_activity (user_id, activity_date)
+  values (v_user_id, current_date)
+  on conflict (user_id, activity_date) do nothing;
+
+  select * into v_daily
+  from public.daily_activity
+  where user_id = v_user_id and activity_date = current_date
+  for update;
+
+  if v_daily.recommendation_id is not null then
+    select * into v_recommendation
+    from public.recommendations
+    where id = v_daily.recommendation_id and user_id = v_user_id;
+
+    if found then
+      return to_jsonb(v_recommendation);
+    end if;
+  end if;
+
+  insert into public.recommendations (
+    activity_id, user_id, title, description, category, difficulty, points,
+    estimated_impact, recommendation_date
+  )
+  values (
+    null, v_user_id, p_title, p_description, p_category, p_difficulty,
+    p_points, p_estimated_impact, current_date
+  )
+  on conflict (user_id, recommendation_date)
+    where recommendation_date is not null
+    do nothing
+  returning * into v_recommendation;
+
+  if not found then
+    select * into v_recommendation
+    from public.recommendations
+    where user_id = v_user_id and recommendation_date = current_date;
+  end if;
+
+  if v_recommendation.id is null then
+    raise exception 'daily_recommendation_not_saved';
+  end if;
+
+  update public.daily_activity
+  set recommendation_id = v_recommendation.id,
+      completed = v_recommendation.is_completed
+  where user_id = v_user_id and activity_date = current_date;
+
+  return to_jsonb(v_recommendation);
+end;
+$$;
+
 create or replace function public.complete_recommendation(p_recommendation_id uuid)
 returns jsonb
 language plpgsql
@@ -296,6 +414,7 @@ declare
   v_badge_progress integer;
   v_new_badge_ids uuid[] := '{}'::uuid[];
   v_new_badge_id uuid;
+  v_completed_challenges jsonb := '[]'::jsonb;
 begin
   if v_user_id is null then
     raise exception 'authentication_required' using errcode = '28000';
@@ -322,7 +441,13 @@ begin
     (v_user_id, v_recommendation.id, v_recommendation.activity_id, v_recommendation.points);
 
   for v_challenge in
-    select uc.id as user_challenge_id, uc.progress, c.target_count, c.points
+    select
+      uc.id as user_challenge_id,
+      uc.progress,
+      c.target_count,
+      c.points,
+      c.id as challenge_id,
+      c.title as challenge_title
     from public.user_challenges uc
     join public.challenges c on c.id = uc.challenge_id
     where uc.user_id = v_user_id
@@ -339,6 +464,12 @@ begin
           completed_at = now()
       where id = v_challenge.user_challenge_id;
       v_challenge_points := v_challenge_points + v_challenge.points;
+      v_completed_challenges := v_completed_challenges || jsonb_build_array(
+        jsonb_build_object(
+          'id', v_challenge.challenge_id,
+          'title', v_challenge.challenge_title
+        )
+      );
     else
       update public.user_challenges
       set progress = v_challenge.progress + 1
@@ -371,16 +502,29 @@ begin
     raise exception 'profile_not_found' using errcode = 'P0002';
   end if;
 
-  insert into public.daily_activity (user_id, activity_date, points, activity_count)
+  insert into public.daily_activity (
+    user_id, activity_date, points, activity_count, completed, recommendation_id
+  )
   values (
     v_user_id,
     current_date,
     v_recommendation.points + v_challenge_points,
-    1
+    1,
+    coalesce(v_recommendation.recommendation_date = current_date, false),
+    case
+      when v_recommendation.recommendation_date = current_date
+        then v_recommendation.id
+      else null
+    end
   )
   on conflict (user_id, activity_date) do update
     set points = public.daily_activity.points + excluded.points,
-        activity_count = public.daily_activity.activity_count + 1;
+        activity_count = public.daily_activity.activity_count + 1,
+        completed = public.daily_activity.completed or excluded.completed,
+        recommendation_id = coalesce(
+          public.daily_activity.recommendation_id,
+          excluded.recommendation_id
+        );
 
   for v_badge in
     select * from public.badges
@@ -417,10 +561,15 @@ begin
   return jsonb_build_object(
     'recommendation_id', v_recommendation.id,
     'new_badge_ids', to_jsonb(v_new_badge_ids),
-    'challenge_bonus', v_challenge_points
+    'challenge_bonus', v_challenge_points,
+    'completed_challenges', v_completed_challenges
   );
 end;
 $$;
 
+revoke all on function public.ensure_daily_recommendation(text, text, text, text, integer, text) from public, anon;
+grant execute on function public.ensure_daily_recommendation(text, text, text, text, integer, text) to authenticated;
 revoke all on function public.complete_recommendation(uuid) from public, anon;
 grant execute on function public.complete_recommendation(uuid) to authenticated;
+
+notify pgrst, 'reload schema';

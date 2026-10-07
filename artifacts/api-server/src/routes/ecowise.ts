@@ -161,6 +161,12 @@ function mapChallenge(row: Row, enrollment?: Row) {
   };
 }
 
+function relationRows(value: unknown): Row[] {
+  if (Array.isArray(value)) return value as Row[];
+  if (value && typeof value === "object") return [value as Row];
+  return [];
+}
+
 function categorize(input: string): ActivityCategory {
   const text = input.toLowerCase();
   if (/\b(car|drive|driving|commut|travel|bus|train|metro|bike|bicycle|flight|plane|college|walk)\b/.test(text)) {
@@ -460,6 +466,123 @@ function lastSevenDays() {
   });
 }
 
+async function loadTodayActivity(
+  client: AuthenticatedSupabase["client"],
+  userId: string,
+  profile: Row,
+  recentActivities: Row[],
+  dailyRows: Row[],
+) {
+  const today = toDateOnly(new Date());
+  const todayRow = dailyRows.find(
+    (item) => String(item["activity_date"]).slice(0, 10) === today,
+  );
+  let recommendation: Row | null = null;
+
+  if (todayRow?.["recommendation_id"]) {
+    const saved = await client
+      .from("recommendations")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("id", String(todayRow["recommendation_id"]))
+      .maybeSingle();
+    assertNoError(saved.data, saved.error);
+    recommendation = (saved.data as Row | null) ?? null;
+  }
+
+  if (!recommendation) {
+    const previousDays = dailyRows
+      .filter((item) => String(item["activity_date"]).slice(0, 10) < today)
+      .sort((a, b) =>
+        String(b["activity_date"]).localeCompare(String(a["activity_date"])),
+      );
+    const previousDailyRecommendation = previousDays
+      .flatMap((item) => relationRows(item["recommendations"]))
+      .at(0);
+    const previousCategory = previousDailyRecommendation?.["category"];
+    const preferredCategory = profile["preferred_category"];
+    const recentCategory = recentActivities[0]?.["category"];
+    let category = (
+      typeof preferredCategory === "string"
+        ? preferredCategory
+        : typeof recentCategory === "string"
+          ? recentCategory
+          : typeof previousCategory === "string"
+            ? previousCategory
+            : "Transportation"
+    ) as ActivityCategory;
+    const categories: ActivityCategory[] = [
+      "Transportation",
+      "Energy",
+      "Water",
+      "Food",
+      "Shopping",
+      "Waste",
+      "Lifestyle",
+      "Other",
+    ];
+    if (!categories.includes(category)) category = "Transportation";
+    if (category === previousCategory) {
+      category =
+        categories[(categories.indexOf(category) + 1) % categories.length]!;
+    }
+
+    const recentTitles = new Set(
+      previousDays.flatMap((item) =>
+        relationRows(item["recommendations"])
+          .map((dailyRecommendation) => dailyRecommendation["title"])
+          .filter((title): title is string => typeof title === "string"),
+      ),
+    );
+    const drafts = recommendationDrafts(category);
+    const unusedDrafts = drafts.filter((draft) => !recentTitles.has(draft.title));
+    const availableDrafts = unusedDrafts.length ? unusedDrafts : drafts;
+    const dayIndex = Math.floor(Date.parse(`${today}T00:00:00Z`) / 86_400_000);
+    const draft = availableDrafts[dayIndex % availableDrafts.length]!;
+    const latestActivity = recentActivities[0];
+    const activityName = latestActivity?.["activity_name"];
+    const currentChoice = latestActivity?.["current_choice"];
+    const description =
+      latestActivity?.["category"] === category &&
+      typeof activityName === "string" &&
+      typeof currentChoice === "string"
+        ? `Based on your recent ${activityName} entry using ${currentChoice.toLowerCase()}, ${draft.description}`
+        : draft.description;
+
+    const created = await client.rpc("ensure_daily_recommendation", {
+      p_category: category,
+      p_title: draft.title,
+      p_description: description,
+      p_difficulty: draft.difficulty,
+      p_points: 20,
+      p_estimated_impact: draft.estimatedImpact,
+    });
+    assertNoError(created.data, created.error);
+    if (!created.data || typeof created.data !== "object") {
+      throw new Error("Daily recommendation was not returned by Supabase");
+    }
+    recommendation = created.data as Row;
+  }
+
+  const dayResult = await client
+    .from("daily_activity")
+    .select("activity_date, activity_count, points, completed")
+    .eq("user_id", userId)
+    .eq("activity_date", today)
+    .single();
+  assertNoError(dayResult.data, dayResult.error);
+  const day = dayResult.data as Row;
+
+  return {
+    activityDate: String(day["activity_date"]).slice(0, 10),
+    activityCount: Number(day["activity_count"] ?? 0),
+    points: Number(day["points"] ?? 0),
+    completed:
+      day["completed"] === true || recommendation["is_completed"] === true,
+    recommendation: mapRecommendation(recommendation),
+  };
+}
+
 async function loadChallengeProgress(
   client: AuthenticatedSupabase["client"],
   userId: string,
@@ -628,7 +751,9 @@ router.get("/dashboard", async (_req, res): Promise<void> => {
         .limit(50),
       client
         .from("daily_activity")
-        .select("activity_date, activity_count, points")
+        .select(
+          "activity_date, activity_count, points, completed, recommendation_id, recommendations(category, title)",
+        )
         .eq("user_id", user.id)
         .gte("activity_date", dates[0])
         .lte("activity_date", dates[6]),
@@ -642,7 +767,15 @@ router.get("/dashboard", async (_req, res): Promise<void> => {
   assertNoError(dailyResult.data, dailyResult.error);
   assertNoError(earnedResult.data, earnedResult.error);
 
-  const activities = ((activitiesResult.data ?? []) as Row[]).map(mapActivity);
+  const activityRows = (activitiesResult.data ?? []) as Row[];
+  const activities = activityRows.map(mapActivity);
+  const dailyActivity = await loadTodayActivity(
+    client,
+    user.id,
+    profileRow,
+    activityRows,
+    (dailyResult.data ?? []) as Row[],
+  );
   const categoryCounts = new Map<ActivityCategory, number>();
   for (const activity of activities) {
     const category = activity["category"] as ActivityCategory;
@@ -668,6 +801,7 @@ router.get("/dashboard", async (_req, res): Promise<void> => {
     .map(mapBadge);
   const response = GetDashboardResponse.parse({
     profile: mapProfile(profileRow),
+    dailyActivity,
     weeklyActivity,
     categoryBreakdown: Array.from(categoryCounts, ([category, count]) => ({
       category,
@@ -765,6 +899,8 @@ router.post(
     const rpcData = completion.data as {
       recommendation_id?: string;
       new_badge_ids?: string[];
+      challenge_bonus?: number;
+      completed_challenges?: Array<{ id: string; title: string }>;
     } | null;
     const [profileRow, recommendationResult, challengeProgress] =
       await Promise.all([
@@ -795,6 +931,8 @@ router.post(
       profile: mapProfile(profileRow),
       newBadges,
       updatedChallenges: challengeProgress,
+      challengeBonus: Number(rpcData?.challenge_bonus ?? 0),
+      completedChallenges: rpcData?.completed_challenges ?? [],
     });
     res.json(response);
   },
